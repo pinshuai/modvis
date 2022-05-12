@@ -31,7 +31,7 @@ def valid_mesh_filename(domain, format=None):
 
 class VisFile:
     """Class managing the reading of ATS visualization files."""
-    def __init__(self, directory='.', domain=None, filename=None, mesh_filename=None, model_time_unit='yr', return_time_unit='d'):
+    def __init__(self, directory='.', domain=None, filename=None, mesh_filename=None, model_time_unit='yr', return_time_unit='d', load_mesh=False, **kwargs):
         """Create a VisFile object.
 
         Parameters
@@ -49,6 +49,11 @@ class VisFile:
           Time unit used for the h5 vis file. Default is year.
         return_time_unit: str, default is 'd'
           Time unit used for returned object self.times. Default is 'd'
+        load_mesh, bool
+            load mesh files if true. Default to False.
+        columnar, bool
+            If true, reorder 3D meshes to a "structured in z" mesh. Return shape of (ntriangles-per-layer, nlayers, ndim).
+            See loadMesh() for more information.
 
         Returns
         -------
@@ -107,6 +112,13 @@ class VisFile:
         self.d = h5py.File(self.fname,'r')
         self.loadTimes()
         self.map = None
+
+        if load_mesh:
+            self.loadMesh(**kwargs)
+            etype, vertex_coords, conn = meshXYZ(self.directory, self.mesh_filename)
+            self.etype = etype
+            self.vertex_xyz = np.array(list(vertex_coords.values()))
+            self.conn = conn
         
     def __enter__(self):
         return self
