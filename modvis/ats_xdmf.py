@@ -269,6 +269,9 @@ class VisFile:
         """
         vname = self.variable(vname)
         logging.debug(f"get variable: {vname}")
+        # if vname does not exist, raise an error!
+        if vname not in list(self.d.keys()):
+            raise RuntimeError(f"Variable: {vname} is not found in vis file!")
         val = np.array([self._get(vname, k) for k in self.cycles])
         if self.map is None:
             return val

@@ -17,8 +17,8 @@ import geopandas as gpd
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s: %(message)s')
 import sys
-sys.path.append("../myfunctions")
-import myfunctions.utils as utils
+sys.path.append("..")
+import modvis.utils as utils
 
 def gantt_plot(ranges, **kwargs):
     """Plot Gantt plot given start and end date.

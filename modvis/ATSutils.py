@@ -14,15 +14,16 @@ from calendar import isleap
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s: %(message)s')
 import sys
+
 # sys.path.append(os.environ['MYFUNC_DIR'])
-# sys.path.append("../myfunctions")
-# sys.path.append(".")
+# sys.path.append("../modvis")
+sys.path.append("..")
 # import utils as utils
 # import colors as fcolors
 # import ats_xdmf as xdmf
-from myfunctions import utils
-import myfunctions.colors as fcolors
-import myfunctions.ats_xdmf as xdmf
+from modvis import utils
+import modvis.colors as fcolors
+import modvis.ats_xdmf as xdmf
 
 colors = fcolors.colors('matplotlib')
 rho_m = 55500 # moles/m^3, water molar density

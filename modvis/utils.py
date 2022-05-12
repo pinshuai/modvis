@@ -18,10 +18,10 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s: %(message)s')
 
 import sys
-# sys.path.append("..")
+sys.path.append("..")
 
 # import objectivefunctions as ofs
-import myfunctions.objectivefunctions as ofs
+import modvis.objectivefunctions as ofs
 
 def mark_start_end(df, label = None):
     """Mark the start and end of the dateframe time series."""
@@ -270,7 +270,7 @@ def get_metrics(obs_t, obs, simu_t, simu, metrics = 'all', start_date = None,
         end_date: datetime object
             ending date for RMSE and R^2 calculation
         epsilon: float
-            small number added to the data to avoid zero issue when using log transformation (e.g., logNSE)
+            small number added to the data to avoid zero issue when using log transformation (e.g., logNSE). Recommended value is 1/100 of the mean observed flow (see Santos et al., 2018 HESS for discussion).
 
     Returns:
         dict of metrics and dataframe used.
@@ -318,6 +318,8 @@ def get_metrics(obs_t, obs, simu_t, simu, metrics = 'all', start_date = None,
         elif i == 'NSE':
             val = ofs.nashsutcliffe(df['obs'].values, df['simu'].values)
         elif i == 'logNSE':
+            if epsilon == 0:
+                epsilon = df['obs'].mean() / 100
             val = ofs.lognashsutcliffe(df['obs'].values, df['simu'].values, epsilon=epsilon)
         elif i == 'bias':
             val = ofs.bias(df['obs'].values, df['simu'].values)
