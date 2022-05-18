@@ -44,6 +44,9 @@ nav:
     - Home: index.md
     - Installation: installation.md
     - Usage: usage.md
+    - Notebooks:
+          - notebooks/plot_surface.ipynb
+          - notebooks/plot_subsurface.ipynb
     - Contributing: contributing.md
     - FAQ: faq.md
     - Changelog: changelog.md
