@@ -34,14 +34,17 @@ To plot variables on the surface mesh:
 ```python
 import modvis.plot_vis_file as pv
 
-pv.plot_surface_data(surface_vis, surface_vertex_xyz, surface_conn, 
-                               var_name="surface-precipitation_rain", log = False,
-                              time_slice= "2019-05-01", vmax = 4)
+# import visdump file
+visfile = xdmf.VisFile(model_dir='../data/coalcreek', domain='surface', filename='ats_vis_surface_data.h5', mesh_filename='ats_vis_surface_mesh.h5', load_mesh=True)
+
+# plot surface ponded depth
+pv.plot_surface_data(visfile, var_name="surface-ponded_depth", log=True,
+                              time_slice="2019-05-01", vmin=0.01, vmax=4)
 ```
 
 ## Examples
 
-Jupyter notebook examples can be found in the repo.
+Jupyter notebook examples can be found under [examples/notebooks](./examples/notebooks)
 
 
 ## Credits
