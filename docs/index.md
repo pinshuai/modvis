@@ -30,11 +30,15 @@ pip install modvis
 To plot variables on the surface mesh:
 
 ```python
+import modvis.ats_xdmf as xdmf
 import modvis.plot_vis_file as pv
 
-pv.plot_surface_data(surface_vis, surface_vertex_xyz, surface_conn,
-                               var_name="surface-precipitation_rain", log = False,
-                              time_slice= "2019-05-01", vmax = 4)
+# import visdump file
+visfile = xdmf.VisFile(model_dir='.', domain='surface', load_mesh=True)
+
+# plot surface ponded depth
+pv.plot_surface_data(visfile, var_name="surface-ponded_depth", log=True,
+                              time_slice="2019-05-01", vmin=0.01, vmax=4)
 ```
 
 ## Examples
