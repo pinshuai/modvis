@@ -1,10 +1,10 @@
-h5py
-matplotlib
-numpy
-pandas
-scipy
-seaborn
-sklearn
+h5py>=3.6.0
+matplotlib>=3.5.2
+numpy>=1.22.3
+pandas>=1.4.2
+scipy>=1.8.1
+seaborn>=0.11.2
+scikit-learn>=1.1.0
 
 ## optional packages
 # shapely
