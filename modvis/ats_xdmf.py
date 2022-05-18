@@ -1,6 +1,6 @@
 """Functions for parsing Amanzi/ATS XDMF visualization files.
 
-This file was copied from https://github.com/amanzi/ats/tree/master/tools/utils. For questions, please contact the following author.
+This file was modified from https://github.com/amanzi/ats/tree/master/tools/utils. For questions, please contact the following author.
 
 Author: Ethan Coon (ecoon@ornl.gov)
 """

@@ -1,14 +1,13 @@
 """Loads and/or plots 2D, topologlically structured data on quadrilaterals using matplotlib.
+
+Author: Ethan Coon (ecoon@ornl.gov)
 """
 
 import sys,os
 import numpy as np
 import h5py
-# import colors
-# import mesh
-import sys
-sys.path.append("../")
-# sys.path.append("./")
+# import sys
+# sys.path.append("../")
 import modvis.ats_xdmf as mesh
 
 
@@ -161,7 +160,7 @@ def plot(dataset, ax, cax=None, vmin=None, vmax=None, cmap="jet",
 
     # get the mesh and collapse to 2D
     etype, coords, conn = mesh.meshElemXYZ(filename=mesh_filename, directory=directory)
-    if etype is not 'HEX':
+    if etype != 'HEX':
         raise RuntimeError("Only works for Hexs")
 
     coords2 = np.array([[coords[i][0::2] for i in c[1:] if abs(coords[i][1] - y_coord) < 1.e-8] for c in conn])
@@ -208,9 +207,9 @@ def plot(dataset, ax, cax=None, vmin=None, vmax=None, cmap="jet",
     ax.set_xlim(xmin,xmax)
     ax.set_ylim(zmin,zmax)
 
-    if cax is not None:
+    if cax != None:
         cb = plt.colorbar(polygons, cax=cax)
-        if label is not None:
+        if label != None:
             cb.set_label(label)
         
     return ((xmin,xmax),(zmin,zmax))

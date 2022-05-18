@@ -4,10 +4,8 @@ import matplotlib
 from matplotlib import collections as pltc
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s: %(message)s')
-import sys
-# sys.path.append("./")
-sys.path.append("../")
-# sys.path.append("../modvis")
+# import sys
+# sys.path.append("../")
 from modvis.ATSutils import rmLeapDays
 import fiona, shapely
 from datetime import datetime

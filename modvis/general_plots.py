@@ -16,8 +16,8 @@ import rasterio, fiona
 import geopandas as gpd
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s: %(message)s')
-import sys
-sys.path.append("..")
+# import sys
+# sys.path.append("..")
 import modvis.utils as utils
 
 def gantt_plot(ranges, **kwargs):

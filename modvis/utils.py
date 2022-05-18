@@ -18,7 +18,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s: %(message)s')
 
 import sys
-sys.path.append("..")
+# sys.path.append("..")
 
 # import objectivefunctions as ofs
 import modvis.objectivefunctions as ofs

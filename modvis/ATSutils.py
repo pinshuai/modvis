@@ -15,12 +15,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s: %(message)s')
 import sys
 
-# sys.path.append(os.environ['MYFUNC_DIR'])
-# sys.path.append("../modvis")
-sys.path.append("..")
-# import utils as utils
-# import colors as fcolors
-# import ats_xdmf as xdmf
+# sys.path.append("..")
 from modvis import utils
 import modvis.colors as fcolors
 import modvis.ats_xdmf as xdmf
