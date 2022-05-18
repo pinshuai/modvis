@@ -64,18 +64,11 @@ def get_time(vis_data, time_slice=None, **kwargs):
     else:
         return times
 
-def plot_water_content(vis_data, ordered_centroids, vertex_xyz, conn, map,
+def plot_water_content(vis_data, 
                        origin_date = '1980-01-01', layer_ind=0, time_slice = -1, colorbar = False, ax = None, title = None,  **kwargs):
     """plot water content in a single layer in the subsurface.
     Parameters:
         vis_data, ats_xdmf.VisFile object
-        ordered_centroid, ats_xdmf.structuredOrdering object
-        vertex_xyz, numpy array
-            3D array that stores the xyz coordinates of each vertex
-        conn, object return from ats_xdmf.meshXYZ
-            connection that forms each triangle
-        map, object return from ats_xdmf.structuredOrdering
-            mapping from structured (in z) to unstructured cells
         origin_date, str, default to 1980-01-01
             origin_date of the model
         layer_ind, int, 0-indexed
@@ -89,6 +82,11 @@ def plot_water_content(vis_data, ordered_centroids, vertex_xyz, conn, map,
     Returns:
         fig, ax   
     """
+    ordered_centroids = vis_data.centroids
+    vertex_xyz = vis_data.vertex_xyz
+    conn = vis_data.conn
+    map = vis_data.map
+
     times = vis_data.times
     datetime = rmLeapDays(times, origin_date = origin_date)
     
@@ -100,8 +98,8 @@ def plot_water_content(vis_data, ordered_centroids, vertex_xyz, conn, map,
     ilayer = layers[layer_ind]
 #     icoord = ordered_centroids[:, ilayer, :]
     icells = map[:, ilayer].flatten()
-    isat = sat[time_slice, icells]
-    ipor = por[time_slice, icells]
+    isat = sat[time_slice, :, ilayer]
+    ipor = por[time_slice, :, ilayer]
     idat = isat*ipor
     
     iconn = conn[icells, -3:]
@@ -129,30 +127,35 @@ def plot_water_content(vis_data, ordered_centroids, vertex_xyz, conn, map,
     except:
         return ax, tpc
 
-def plot_column_head(vis_data, ordered_centroids, map,
-                     origin_date='1980-01-01', var_name = "pressure", col_ind = 0, plot = True,
+def plot_column_head(vis_data, 
+                     origin_date='1980-01-01', col_ind = 0, plot = True,
                      ax=None):
     """plot variable in a single column over time in the subsurface.
     Parameters:
         vis_data, object from xdmf.VisFile()
-        ordered_centroids, array
-            object from xdmf.structuredOrdering()
-        map, array object from xdmf.structuredOrdering()
-        var_name, "pressure"
+        origin_date, str
+            model start origin time. Defaults to 1980-1-1
         col_ind, int
             column index for plotting head
+        plot, bool
+            plot the head if true
     Returns:
         df, dataframe with head 
     """
+    ordered_centroids = vis_data.centroids
+    # vertex_xyz = vis_data.vertex_xyz
+    # conn = vis_data.conn
+    map = vis_data.map
     times = get_time(vis_data, origin_date=origin_date)
     # times = vis_data.times
     # datetime = rmLeapDays(times)
-    dat = vis_data.getArray(var_name)
+    dat = vis_data.getArray("pressure")
 
     iz_coord = ordered_centroids[col_ind, :, -1]
     icells = map[col_ind, :].flatten()
 
-    idat = dat[:, icells]
+    # idat = dat[:, icells]
+    idat = dat[:, col_ind, :]
     ih = (idat - atm_p)/rho /g
     # find first saturated cell from bottom up
     try:
@@ -177,30 +180,36 @@ def plot_column_head(vis_data, ordered_centroids, map,
     df.set_index("datetime", inplace = True)
     return df
 
-
-def plot_depth2table(transect_data, times, vertex_xyz, conn, map,
-                     centroids, surface_centroids, surface_elev,
-                    time_slice = -1, ax = None, return_head = False, title = True, colorbar = True, contour = False, contourline = True, nlevel = 5, **kwargs):
+def plot_gw_surface(visfile, origin_date="1980-01-01", time_slice = -1, return_head = False, title = True, colorbar = True, contour = False, contourline = True, nlevel = 5, ax = None, **kwargs):
     """Plot groundwater table across the domain at given time. 
     Parameters:
-        transect_data, array
-            data product from transect_data()
-            e.g. transect_data.transect_data("pressure", directory = model_dir, filename=subsurface_h5,  mesh_filename=subsurface_mesh)
-        times, array
-            time series in datetime format.
-        vertex_xyz, array
-        conn,
-            trianges for the top surface
-        map,
-            mapping from unstructured to structured cells
+        visfile, ats_xdmf.VisFile object
+        origin_date, str
+            model start origin time. Defaults to 1980-1-1
         time_slice, int
+        return_head, bool
+            return groundwater head data if true.
+        title, bool
+            add datetime as title if true.
+        colorbar, bool
+            add colorbar if true.
         contour, bool
             If true, plot contourf and contour instead of tripcolor.
+        contourline, bool
+            add contourline if true.
         nlevel, int
             Number of levels used for contour
+        ax, axis
+            axis for plotting. Default to create a new one.
     Returns:
         fig, ax
     """
+    vertex_xyz = visfile.vertex_xyz
+    conn = visfile.conn
+    map = visfile.map
+
+    t = visfile.times
+    times = rmLeapDays(t)
 
     try:
         time_idx = int(time_slice)
@@ -209,112 +218,11 @@ def plot_depth2table(transect_data, times, vertex_xyz, conn, map,
         time_idx = np.where(times == itime)[0][0] 
         
 #     datetime = times
-    ipress = transect_data[2, time_idx, :, :]
-    iz_coord = transect_data[1, time_idx, :, :]
-    ih = (ipress - atm_p)/rho /g
-
-    try:
-        # get the last saturated cell index at each column
-        sat_idx = [np.where(ih[i, :] > 0)[0][-1] for i in range(ih.shape[0])]
-    except:
-        unsat_col_id = np.where(ih[:, 0]<0)[0]
-        logging.debug(f"water table is below the bottom at columns: {unsat_col_id}. Use the bottom layer instead.")
-        sat_idx = [0]*ih.shape[0]
-
-    iH = np.asarray([ih[i, sat_idx[i]] + iz_coord[i, sat_idx[i]] for i in range(ih.shape[0])])
-    # get mapping from surface to subsurface cels
-    surface2sub_map = map_surface2subsurface(map, centroids, surface_centroids)
-    # get depth to water table
-    depth = surface_elev[0, :][surface2sub_map] - iH
-
-    icells = map[:, -1].flatten()
-    iconn = conn[icells, -3:]
-    if ax is None:
-        fig, ax = plt.subplots(1,1, figsize=(8, 4))    
-    ax.set_aspect('equal')
-
-    tpc = ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], iconn, facecolors=
-                       depth, **kwargs)  
-    
-    if contour: 
-        if isinstance(nlevel, int):
-            levels = np.linspace(np.floor(depth.min()), np.ceil(depth.max()), nlevel)
-        elif isinstance(nlevel, list) or isinstance(nlevel, (np.ndarray, np.generic)):
-            levels = nlevel
-        else:
-            raise RuntimeError("Must provide level info for contour! Can be a list of levels of number of levels")
-        
-        unique_cells = np.unique(iconn)
-        vertex_xyz_2D = vertex_xyz[unique_cells]
-        iconn_reorder = np.array([np.where(unique_cells == j)[0][0] for i in iconn for j in i]).reshape(-1, 3)
-        # get color value at vertex
-        val = get_vertex_value_from_cell(vertex_xyz_2D, iconn_reorder, depth)
-
-        tpc = ax.tricontourf(vertex_xyz_2D[:,0], vertex_xyz_2D[:,1], iconn_reorder, 
-                       val, levels = levels, extend = 'both', **kwargs)  
-        if contourline:
-            ax.tricontour(vertex_xyz_2D[:,0], vertex_xyz_2D[:,1], iconn_reorder, 
-                       val, colors = 'k', linewidths = 0.5, levels = levels, extend = 'both', **kwargs)          
-        
-    if colorbar:
-        clabel = 'GW table [m]'
-        if contour:
-            cb = plt.colorbar(tpc)
-        else:
-            cb = plt.colorbar(tpc, extend = "both")
-        cb.ax.set_ylabel(clabel, labelpad=0.3)   
-#     cb = plt.colorbar(tpc)
-    
-    if not title:
-        titles = ''
-    else:
-        titles = f"Time: {times[time_idx].date()}"
-    
-    ax.set_title(titles)
-    ax.set_xlabel("Easting [m]")
-    ax.set_ylabel("Northing [m]")
-#     cb.ax.set_ylabel("GW table [m]", labelpad=0.4)
-    plt.tight_layout()    
-    if return_head:
-        return iH, ax, tpc
-    else:
-        try:
-            return fig, ax, tpc
-        except:
-            return ax, tpc
-
-def plot_gw_surface(transect_data, times, vertex_xyz, conn, map,
-                    origin_date="1980-01-01", time_slice = -1, ax = None, return_head = False, title = True, colorbar = True, contour = False, contourline = True, nlevel = 5, **kwargs):
-    """Plot groundwater table across the domain at given time. 
-    Parameters:
-        transect_data, array
-            data product from transect_data()
-            e.g. transect_data.transect_data("pressure", directory = model_dir, filename=subsurface_h5,  mesh_filename=subsurface_mesh)
-        times, array
-            time series in datetime format.
-        vertex_xyz, array
-        conn,
-            trianges for the top surface
-        map,
-            mapping from unstructured to structured cells
-        time_slice, int
-        contour, bool
-            If true, plot contourf and contour instead of tripcolor.
-        nlevel, int
-            Number of levels used for contour
-    Returns:
-        fig, ax
-    """
-
-    try:
-        time_idx = int(time_slice)
-    except ValueError:
-        itime = datetime.strptime(time_slice, '%Y-%m-%d')
-        time_idx = np.where(times == itime)[0][0] 
-        
-#     datetime = times
-    ipress = transect_data[2, time_idx, :, :]
-    iz_coord = transect_data[1, time_idx, :, :]
+    press = visfile.getArray("pressure")
+    ipress = press[time_idx, :,:]
+    # ipress = transect_data[2, time_idx, :, :]
+    # iz_coord = transect_data[1, time_idx, :, :]
+    iz_coord = visfile.centroids[:,:,-1]
     ih = (ipress - atm_p)/rho /g
 
     try:
@@ -383,18 +291,43 @@ def plot_gw_surface(transect_data, times, vertex_xyz, conn, map,
         except:
             return ax, tpc
 
-def plot_column_data(vis_data, ordered_centroids, map, var_name, origin_date =
-                     '1980-01-01', col_ind = 0, cmap = None, contour_spacing = 0.01, ylabel = None, plot_contour = False, levels = None, logx = False, ax=None):
-    """plot variable in a single column over time in the subsurface."""
+def plot_column_data(vis_data, var_name, origin_date='1980-01-01', col_ind = 0, cmap = None, ylabel = None, plot_contour = False, contour_spacing = 0.01, levels = None, logx = False, ax=None):
+    """plot variable in a single column over time in the subsurface.
+
+    Parameters:
+        vis_data, object from xdmf.VisFile()
+        var_name, str
+            variable name in visfile
+        origin_date, str
+            model start origin time. Defaults to 1980-1-1
+        col_ind, int
+            column index for plotting head
+        cmap, str
+            colormap for plotting
+        plot_contour, bool
+            plot contour if true
+        contour_spacing, float
+            set spacing if plot_contour is True.
+        levels, int
+            levels for contours
+        logx, bool
+            set x-axis to log scale if True
+
+    Returns:
+        df, dataframe with head 
+
+    """
+    ordered_centroids = vis_data.centroids
+    map = vis_data.map
+
     # times = vis_data.times
     times = get_time(vis_data, origin_date=origin_date)
     dat = vis_data.getArray(var_name)
     
     iz_coord = ordered_centroids[col_ind, :, -1]
-    icells = map[col_ind, :].flatten()
-    
-
-    idat = dat[:, icells]
+    # icells = map[col_ind, :].flatten()
+    # idat = dat[:, icells]
+    idat = dat[:, col_ind, :]
     
     if ax is None:
         fig, ax = plt.subplots(1,1, figsize=(8, 3))
@@ -439,31 +372,39 @@ def plot_column_data(vis_data, ordered_centroids, map, var_name, origin_date =
         return fig, ax
     except:
         return
-def plot_layer_data(vis_data, ordered_centroids, vertex_xyz, conn, map,
-                    var_name, origin_date = '1980-01-01', layer_ind = 0, time_slice = -1, cmap = "turbo", colorbar = True, clabel = None, ax = None, log = False, vmin = None, vmax = None, linthresh = 0.01, linscale = 0.01, **kwargs):
+def plot_layer_data(vis_data, var_name, origin_date = '1980-01-01', layer_ind = 0, time_slice = -1, cmap = "turbo", colorbar = True, clabel = None, ax = None, log = False, vmin = None, vmax = None, linthresh = 0.01, linscale = 0.01, **kwargs):
     """plot variable in a single layer in the subsurface.
     Parameters:
         vis_data, ats_xdmf.VisFile object
-        ordered_centroid, ats_xdmf.structuredOrdering object
-        vertex_xyz, numpy array
-            3D array that stores the xyz coordinates of each vertex
-        conn, object return from ats_xdmf.meshXYZ
-            connection that forms each triangle
-        map, object return from ats_xdmf.structuredOrdering
-            mapping from structured (in z) to unstructured cells
         var_name, str or np.array of data
             variable names in the vis file. e.g., saturation_liquid
+        origin_date, str
+            original date used in the model
         layer_ind, int, 0-indexed
             layer id with 0 being on top and -1 on bottom. Note the actual layers are ordered from bottom up.
         time_slice, int, 0-indexed
             time index-0,1,...,-1
+        cmap, str
+            colormap
         colorbar, bool
             whether to add colorbar
+        clabel, str
+            colorbar label
         ax, axis handel. Default is creating one.
+        log, bool
+            set plot to log scale if True
+        linthresh, float
+            keyword for SymLogNorm        
+        linscale, float
+            see keyword for SymLogNorm
         
     Returns:
         fig, ax   
     """
+    ordered_centroids = vis_data.centroids
+    vertex_xyz = vis_data.vertex_xyz
+    conn = vis_data.conn
+    map = vis_data.map
 #     times = vis_data.times
 #     datetime = rmLeapDays(times)
     times, time_idx = get_time(vis_data, time_slice, origin_date = origin_date)
@@ -482,7 +423,8 @@ def plot_layer_data(vis_data, ordered_centroids, vertex_xyz, conn, map,
     ilayer = layers[layer_ind]
 #     icoord = ordered_centroids[:, ilayer, :]
     icells = map[:, ilayer].flatten()
-    idat = dat[time_idx, icells]
+    # idat = dat[time_idx, icells]
+    idat = dat[time_idx, :, ilayer]
     iconn = conn[icells, -3:]
     if vmin is None:
         vmin = np.nanmin(dat)
@@ -519,7 +461,7 @@ def plot_layer_data(vis_data, ordered_centroids, vertex_xyz, conn, map,
     else:
         return ax, tpc
 
-def plot_surface_data(vis_data, vertex_xyz, conn, var_name,
+def plot_surface_data(vis_data, var_name,
                       origin_date="1980-01-01", time_slice = -1,
                       facecolors = None,  subset= False, subset_idx = None,
                       colorbar = True, clabel = None, title = True, ax = None,
@@ -529,12 +471,10 @@ def plot_surface_data(vis_data, vertex_xyz, conn, var_name,
     """plot variable on the surface.
     Parameters:
         vis_data, ats_xdmf.VisFile object
-        vertex_xyz, numpy array
-            3D array that stores the xyz coordinates of each vertex
-        conn, object return from ats_xdmf.meshXYZ
-            connection that forms each triangle
         var_name, str or np.array of actual data
             variable names in the vis file. e.g., saturation_liquid
+        origin_date, str
+            original date set in the model.
         time_slice, int or str with %Y-%m-%d format
             zero-based index or "%Y-%m-%d"
         facecolors, default to None (get from vis_data)
@@ -566,6 +506,10 @@ def plot_surface_data(vis_data, vertex_xyz, conn, var_name,
     Returns:
         fig, ax   
     """
+    vertex_xyz = vis_data.vertex_xyz
+    conn = vis_data.conn
+    volume = vis_data.volume
+
     times, time_idx = get_time(vis_data, time_slice, origin_date=origin_date)
     
     if isinstance(var_name, str):
@@ -575,9 +519,6 @@ def plot_surface_data(vis_data, vertex_xyz, conn, var_name,
         assert(dat.shape[0] == len(times))
     else:
         raise RuntimeError("Must provide string of variable or np.array of data!")
-        
-    vis_data.loadMesh()
-    volume = vis_data.volume
     
     if isinstance(var_name, str):
         if 'transpiration' in var_name or 'precip' in var_name or 'snow-melt' in var_name:
