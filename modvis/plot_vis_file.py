@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 # import sys
 # sys.path.append("../")
 from modvis.ATSutils import rmLeapDays
-import fiona, shapely
+# import fiona, shapely
 from datetime import datetime
 
 rho_m = 55500 # moles/m^3, water molar density
@@ -607,45 +607,45 @@ def plot_surface_data(vis_data, var_name,
     except:
         return ax, tpc
     
-def plot_riverbed(source, vertex_xyz, triangles, rivers=None, dist_to_river = 200, plot = True):
-    """find riverbed region given river shapefile or index."""
+# def plot_riverbed(source, vertex_xyz, triangles, rivers=None, dist_to_river = 200, plot = True):
+#     """find riverbed region given river shapefile or index."""
 
-    try:
-        if rivers is None:
-            with fiona.open(source, 'r') as fid:
-                profile = fid.profile
-                shps = [s for (i,s) in fid.items()]  
-            comids = [shp['properties']['COMID'] for shp in shps]
+#     try:
+#         if rivers is None:
+#             with fiona.open(source, 'r') as fid:
+#                 profile = fid.profile
+#                 shps = [s for (i,s) in fid.items()]  
+#             comids = [shp['properties']['COMID'] for shp in shps]
 
-            rivers = [shapely.geometry.shape(shape['geometry']) for shape in shps]
+#             rivers = [shapely.geometry.shape(shape['geometry']) for shape in shps]
 
-        river_multiline = shapely.geometry.MultiLineString(rivers)
+#         river_multiline = shapely.geometry.MultiLineString(rivers)
 
-        distances = []
-        for tri in triangles:
-            verts = vertex_xyz[tri]
-            bary = np.sum(np.array(verts), axis=0)/3
-            bary_p = shapely.geometry.Point(bary[0], bary[1])
-            distances.append(bary_p.distance(river_multiline))
-        distances = np.array(distances)
+#         distances = []
+#         for tri in triangles:
+#             verts = vertex_xyz[tri]
+#             bary = np.sum(np.array(verts), axis=0)/3
+#             bary_p = shapely.geometry.Point(bary[0], bary[1])
+#             distances.append(bary_p.distance(river_multiline))
+#         distances = np.array(distances)
 
-        river_idx = distances < dist_to_river  
-    except:
-        river_idx = np.loadtxt(source, dtype='bool')
+#         river_idx = distances < dist_to_river  
+#     except:
+#         river_idx = np.loadtxt(source, dtype='bool')
           
-    assert(river_idx.shape[0] == triangles.shape[0])
+#     assert(river_idx.shape[0] == triangles.shape[0])
     
-    if plot:
-        fig, ax = plt.subplots(1,1, figsize=(6,4))
-        ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], triangles[river_idx], vertex_xyz[:,2], 
-              edgecolors = 'w', linewidth=0.01)
-        lines = [np.array(l.coords)[:,0:2] for l in rivers]
-        lc = pltc.LineCollection(lines, linewidths = 0.5, color = 'w')
-        res = ax.add_collection(lc)
-#         plt.plot(*river_multiline.exterior.xy)
-        plt.title(f"Distance < {dist_to_river} m")
+#     if plot:
+#         fig, ax = plt.subplots(1,1, figsize=(6,4))
+#         ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], triangles[river_idx], vertex_xyz[:,2], 
+#               edgecolors = 'w', linewidth=0.01)
+#         lines = [np.array(l.coords)[:,0:2] for l in rivers]
+#         lc = pltc.LineCollection(lines, linewidths = 0.5, color = 'w')
+#         res = ax.add_collection(lc)
+# #         plt.plot(*river_multiline.exterior.xy)
+#         plt.title(f"Distance < {dist_to_river} m")
         
-    try:
-        return river_idx, shps
-    except:
-        return river_idx
+#     try:
+#         return river_idx, shps
+#     except:
+#         return river_idx

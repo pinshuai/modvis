@@ -12,8 +12,8 @@ import numpy as np, pandas as pd
 import seaborn as sns
 import scipy
 import logging
-import rasterio, fiona
-import geopandas as gpd
+# import rasterio, fiona
+# import geopandas as gpd
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s: %(message)s')
 # import sys
@@ -121,59 +121,59 @@ def plot_FDC(dfs, labels, colors, linestyles=None, start_date=None, end_date=Non
     if new_ax is True:
         return fig, ax
 
-def plot_raster_on_shape(raster_file, shapefile = None, crop = False, ax = None, colorbar = True, clabel = '', vmin = None, vmax = None, robust = False,  **kwargs):
-    """plot raster(.tif, ) and crop based on shapefile.
-    Parameters:
-        raster_file: str
-            path to tiff file
-        shapefile: str, optional
-            path to shapefile
-        crop: bool
-            If true, crop raster to shape file
-    """
+# def plot_raster_on_shape(raster_file, shapefile = None, crop = False, ax = None, colorbar = True, clabel = '', vmin = None, vmax = None, robust = False,  **kwargs):
+#     """plot raster(.tif, ) and crop based on shapefile.
+#     Parameters:
+#         raster_file: str
+#             path to tiff file
+#         shapefile: str, optional
+#             path to shapefile
+#         crop: bool
+#             If true, crop raster to shape file
+#     """
     
-    with rasterio.open(raster_file, 'r') as fid:
-        profile = fid.profile
-        out_image = fid.read(1) # read the first band
-        out_image[np.where(out_image == profile['nodata'])] = np.nan # make missing values nan so that it wont show up in the plot
+#     with rasterio.open(raster_file, 'r') as fid:
+#         profile = fid.profile
+#         out_image = fid.read(1) # read the first band
+#         out_image[np.where(out_image == profile['nodata'])] = np.nan # make missing values nan so that it wont show up in the plot
         
-    if shapefile is not None:
-        with fiona.open(shapefile, "r") as fid:
-            shapes = [feature["geometry"] for feature in fid]  
-        watershed_shape = gpd.read_file(shapefile)
+#     if shapefile is not None:
+#         with fiona.open(shapefile, "r") as fid:
+#             shapes = [feature["geometry"] for feature in fid]  
+#         watershed_shape = gpd.read_file(shapefile)
     
-    if shapefile is not None and crop is True:
-        with rasterio.open(raster_file, 'r') as fid:
-            profile = fid.profile
-            out_image, out_transform = rasterio.mask.mask(fid, shapes, crop=True)
-            profile.update({ "height" : out_image.shape[1],
-                                 "width" : out_image.shape[2],
-                                 "transform" : out_transform})  
-            out_image = out_image[0, :,:] # get first band
-            out_image[np.where(out_image == profile['nodata'])] = np.nan # make missing values nan so that it wont show up in the plot
+#     if shapefile is not None and crop is True:
+#         with rasterio.open(raster_file, 'r') as fid:
+#             profile = fid.profile
+#             out_image, out_transform = rasterio.mask.mask(fid, shapes, crop=True)
+#             profile.update({ "height" : out_image.shape[1],
+#                                  "width" : out_image.shape[2],
+#                                  "transform" : out_transform})  
+#             out_image = out_image[0, :,:] # get first band
+#             out_image[np.where(out_image == profile['nodata'])] = np.nan # make missing values nan so that it wont show up in the plot
             
-    assert(len(out_image.shape) == 2) # make sure it is 2D array
+#     assert(len(out_image.shape) == 2) # make sure it is 2D array
     
-    # note the bound is from upper left to lower right
-    x0, y1= profile['transform'] * (0,0)
-    x1, y0 = profile['transform'] * (profile['width'], profile['height'])
-    extent = x0, x1, y0, y1
+#     # note the bound is from upper left to lower right
+#     x0, y1= profile['transform'] * (0,0)
+#     x1, y0 = profile['transform'] * (profile['width'], profile['height'])
+#     extent = x0, x1, y0, y1
 
-    if ax is None:
-        fig, ax = plt.subplots(1,1, figsize=(6,5))
+#     if ax is None:
+#         fig, ax = plt.subplots(1,1, figsize=(6,5))
     
-    if robust:
-        vmin, vmax = np.nanpercentile(out_image, [2, 98])
+#     if robust:
+#         vmin, vmax = np.nanpercentile(out_image, [2, 98])
 
-    p = ax.matshow(out_image, extent=extent, vmin = vmin, vmax = vmax, **kwargs)
-    if shapefile is not None:
-        watershed_shape.boundary.plot(color ='gray',  lw = 0.5,  ax=ax)
-    if colorbar:
-        cb = plt.colorbar(p, extend = "both", fraction=0.03, pad=0.04)
-        cb.ax.set_ylabel(clabel, labelpad=0.3)        
+#     p = ax.matshow(out_image, extent=extent, vmin = vmin, vmax = vmax, **kwargs)
+#     if shapefile is not None:
+#         watershed_shape.boundary.plot(color ='gray',  lw = 0.5,  ax=ax)
+#     if colorbar:
+#         cb = plt.colorbar(p, extend = "both", fraction=0.03, pad=0.04)
+#         cb.ax.set_ylabel(clabel, labelpad=0.3)        
     
-    if ax is None:
-        return fig, ax
+#     if ax is None:
+#         return fig, ax
 
 def corrMatrix_plot(df, **kwargs):
     """plot correlation matrix between variables. 
