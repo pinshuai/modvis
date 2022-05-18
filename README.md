@@ -35,7 +35,7 @@ To plot variables on the surface mesh:
 import modvis.plot_vis_file as pv
 
 # import visdump file
-visfile = xdmf.VisFile(model_dir='../data/coalcreek', domain='surface', filename='ats_vis_surface_data.h5', mesh_filename='ats_vis_surface_mesh.h5', load_mesh=True)
+visfile = xdmf.VisFile(model_dir='.', domain='surface', load_mesh=True)
 
 # plot surface ponded depth
 pv.plot_surface_data(visfile, var_name="surface-ponded_depth", log=True,

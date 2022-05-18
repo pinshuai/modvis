@@ -31,7 +31,7 @@ def valid_mesh_filename(domain, format=None):
 
 class VisFile:
     """Class managing the reading of ATS visualization files."""
-    def __init__(self, directory='.', domain=None, filename=None, mesh_filename=None, model_time_unit='yr', return_time_unit='d', load_mesh=False, **kwargs):
+    def __init__(self, directory='.', domain=None, prefix='ats_vis', model_time_unit='yr', return_time_unit='d', load_mesh=False, **kwargs):
         """Create a VisFile object.
 
         Parameters
@@ -40,6 +40,8 @@ class VisFile:
           Directory containing vis files.  Default is '.'
         domain : str, optional
           Amanzi/ATS domain name.  Useful in variable names, filenames, and more.
+        prefix : str,
+          prefix for visdump file. Default is 'ats_vis'
         filename : str, optional
           Filename of h5 vis file.  Default is 'ats_vis_DOMAIN_data.h5'.
           (e.g. ats_vis_surface_data.h5).
@@ -62,19 +64,26 @@ class VisFile:
         self.directory = directory
         self.domain = domain
 
-        self.filename = filename
-        if self.filename is None:
-            if self.domain is None:
-                self.filename = 'ats_vis_data.h5'
-            else:
-                self.filename = 'ats_vis_{}_data.h5'.format(self.domain)
+        if self.domain is None:
+            self.filename = f'{prefix}_data.h5'
+            self.mesh_filename = f'{prefix}_mesh.h5'
+        else:
+            self.filename =f'{prefix}_{self.domain}_data.h5'
+            self.mesh_filename = f'{prefix}_{self.domain}_mesh.h5'
 
-        self.mesh_filename = mesh_filename
-        if self.mesh_filename is None:
-            if self.domain is None:
-                self.mesh_filename = 'ats_vis_mesh.h5'
-            else:
-                self.mesh_filename = 'ats_vis_{}_mesh.h5'.format(self.domain)
+        # self.filename = filename
+        # if self.filename is None:
+        #     if self.domain is None:
+        #         self.filename = 'ats_vis_data.h5'
+        #     else:
+        #         self.filename = 'ats_vis_{}_data.h5'.format(self.domain)
+
+        # self.mesh_filename = mesh_filename
+        # if self.mesh_filename is None:
+        #     if self.domain is None:
+        #         self.mesh_filename = 'ats_vis_mesh.h5'
+        #     else:
+        #         self.mesh_filename = 'ats_vis_{}_mesh.h5'.format(self.domain)
 
         if model_time_unit == 'yr':
             if return_time_unit == 'yr':
