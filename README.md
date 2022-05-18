@@ -32,6 +32,7 @@ pip install modvis
 To plot variables on the surface mesh:
 
 ```python
+import modvis.ats_xdmf as xdmf
 import modvis.plot_vis_file as pv
 
 # import visdump file
