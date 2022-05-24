@@ -27,19 +27,24 @@ rho = 997
 g = 9.80665
 
 def get_snow_cover(model_dir, **kwargs):
-    """Calculate snow cover data from model output. Return a dataframe with snow cover percentage."""
-    surface_vis = xdmf.VisFile(model_dir, domain="surface", filename= model_dir + "ats_vis_surface_data.h5", 
-                           mesh_filename= "ats_vis_surface_mesh.h5", 
-                           model_time_unit='d')
+    """Calculate snow cover data from model output. Return a dataframe with snow cover percentage.
     
+    Parameters: 
+        model_dir, str
+            path to model directory
+
+    Returns:
+        Dataframe with time and snowcover percentage.
+    """
+    surface_vis = xdmf.VisFile(model_dir, domain="surface", load_mesh=True, **kwargs) 
     snow_frac = surface_vis.getArray("surface-area_fractions.cell.1")
-    surface_vis.loadMesh()
+    # surface_vis.loadMesh()
     surface_area = surface_vis.volume
     snow_cover_area = np.matmul(snow_frac, surface_area) 
     snow_cover_pct = snow_cover_area/np.sum(surface_area)
     
     times = surface_vis.times
-    t = rmLeapDays(times, **kwargs)
+    t = rmLeapDays(times)
     
     df = pd.DataFrame({'datetime': t, 'snow_cover_pct [-]':snow_cover_pct})
     df.set_index('datetime', inplace=True, drop = True) 
