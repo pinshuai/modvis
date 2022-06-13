@@ -28,7 +28,6 @@ g = 9.80665
 
 def get_snow_cover(model_dir, **kwargs):
     """Calculate snow cover data from model output. Return a dataframe with snow cover percentage.
-    
     Parameters: 
         model_dir, str
             path to model directory
@@ -156,12 +155,12 @@ def combine_hdf5(dir1, dir2, vis_file = "ats_vis_data.h5"):
 
     fname_out = vis_file.replace('.h5', '-combo.h5')
     
-    output_h5 = h5py.File(dir1 + fname_out, "w")
+    output_h5 = h5py.File(os.path.join(dir1, fname_out), "w")
     logging.info(f"Generating combined file: {dir1 + fname_out}")
     
     # read the first file
     logging.info(f"copying the first file: {dir1 + vis_file}")
-    input_h5 = h5py.File(dir1 + vis_file, "r")
+    input_h5 = h5py.File(os.path.join(dir1, vis_file), "r")
     groups = list(input_h5.keys())
     groups = [e for e in groups if e not in const_list]
 
@@ -179,7 +178,7 @@ def combine_hdf5(dir1, dir2, vis_file = "ats_vis_data.h5"):
     
     # read the second file
     logging.info(f"copying the second file: {dir2 + vis_file}")
-    input_h5 = h5py.File(dir2 + vis_file, "r")
+    input_h5 = h5py.File(os.path.join(dir2, vis_file), "r")
     
     new_times = list(input_h5[groups[0]].keys())
     new_times = sorted(new_times, key = lambda time: float(time))
@@ -245,19 +244,19 @@ def plot_timestep(work_dir, fname_run_log=None):
    
    # look for log files following the sequence slurm*.out, run*.log ...
     if fname_run_log is None:
-        log_files = glob.glob(work_dir + "job*.out")
+        log_files = glob.glob(os.path.join(work_dir, "job*.out"))
         if len(log_files) == 0:
-            log_files = glob.glob(work_dir + "slurm*.out")
+            log_files = glob.glob(os.path.join(work_dir, "slurm*.out"))
         if len(log_files) == 0:
-            log_files = glob.glob(work_dir + "run*.log")
+            log_files = glob.glob(os.path.join(work_dir, "run*.log"))
         if len(log_files) == 0:
-            log_files = glob.glob(work_dir + "out*.log")
+            log_files = glob.glob(os.path.join(work_dir, "out*.log"))
         if len(log_files) == 0:
             raise RuntimeError(f"Could not find log file in dir: {work_dir}!")
         log_files.sort(key = os.path.getmtime)
         log_file_path = log_files[-1]    
     elif type(fname_run_log) is str:
-        log_file_path = work_dir + fname_run_log
+        log_file_path = os.path.join(work_dir, fname_run_log)
     # print(log_file_path)
     logging.info(f"found file {log_file_path}!")
 
@@ -473,7 +472,7 @@ def get_subbasin_value(vis_data, varname, subbasin_cells, volume, times, weighte
 
 def surfaceArea(model_dir):
     """get surface area of ATS model"""
-    h5_files = glob.glob(model_dir + "*surface_data.h5")
+    h5_files = glob.glob(os.path.join(model_dir, "*surface_data.h5"))
     if len(h5_files) == 1:
         with h5py.File(h5_files[0]) as f:
             a_key = list(f['surface-cell_volume.cell.0'].keys())[0] # pick any timestamp
@@ -484,7 +483,7 @@ def surfaceArea(model_dir):
     
 def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
                       'D', UTC_time = None, resample_freq = None, canopy =
-                      False, origin_date = "1980-01-01", noleap = True, cumsum = True,
+                      True, origin_date = "1980-01-01", noleap = True, cumsum = True,
                       restart_dir = None, out_file = None, plot = False,
                       subcatchment=False, catchment_area=None,
                       **kwargs):
@@ -726,7 +725,7 @@ def load_output(model_dir, WB_filename, timestep = 'D', origin_date =
         datetime, data, and dataframe(datetime, data)
     
     """
-    df = pd.read_csv(model_dir + WB_filename, comment='#')
+    df = pd.read_csv(os.path.join(model_dir, WB_filename), comment='#')
     if timestep == 'D':
         # get datetime, convert seconds to days
         datetime_noLeap = rmLeapDays(df['time [d]'], freq='D', origin_date =
