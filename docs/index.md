@@ -43,7 +43,7 @@ pv.plot_surface_data(visfile, var_name="surface-ponded_depth", log=True,
 
 ## Examples
 
-Jupyter notebook examples can be found in the repo.
+Jupyter notebook examples can be found in [Github repo](https://github.com/pinshuai/modvis/tree/main/examples/notebooks) or from the left panel under *Notebooks*.
 
 
 ## Credits
