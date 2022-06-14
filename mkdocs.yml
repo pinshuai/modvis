@@ -47,6 +47,7 @@ nav:
     - Notebooks:
           - notebooks/plot_surface.ipynb
           - notebooks/plot_subsurface.ipynb
+          - notebooks/model_evaluation.ipynb
     - Contributing: contributing.md
     - FAQ: faq.md
     - Changelog: changelog.md
