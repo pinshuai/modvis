@@ -358,9 +358,9 @@ def quantile_plot(data, quantiles= [0.25, 0.5, 0.75], axis= 1, arr_index =
     
     return ax, quantiles_df
 
-def one2one_plot(df_obs, df_simu, metrics = ["R^2"], show_metrics=True, ax =
-                 None, equal_aspect = True, show_density = False,
-                 decompose_KGE = False, **kwargs):
+def one2one_plot(df_obs, df_simu, metrics=["R^2"], show_metrics=True,
+                ax=None, equal_aspect=True, show_density=False,
+                 decompose_KGE=False, start_date=None, end_date=None, **kwargs):
     """One to One plot with a line.
     Parameters:
         df_obs, df_simu are Pandas series.
@@ -377,6 +377,10 @@ def one2one_plot(df_obs, df_simu, metrics = ["R^2"], show_metrics=True, ax =
             data is overlapped.
         decompose_KGE, bool
             Decompose the KGE into three components (e.g., r, alpha and beta)
+        start_date, str
+            The start of the datetime index. e.g., "2016-10-01"
+        end_date, str
+            The end of the datetime index. e.g., "2020-10-01"
     Returns:
         A one to one plot with metrics.
     """
@@ -384,6 +388,10 @@ def one2one_plot(df_obs, df_simu, metrics = ["R^2"], show_metrics=True, ax =
     assert(isinstance(df_simu, pd.Series)) 
     if not isinstance(df_obs.index, pd.DatetimeIndex) or not isinstance(df_simu.index, pd.DatetimeIndex):
         raise ValueError("Data Series must have datetime as index.")
+    
+    if start_date is not None or end_date is not None:
+        df_obs = df_obs.loc[start_date:end_date]
+        df_simu = df_simu.loc[start_date:end_date]
 
     metric_dict, df = utils.get_metrics(df_obs.index, df_obs.values, 
                  df_simu.index, df_simu.values, metrics = metrics)
