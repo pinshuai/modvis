@@ -359,13 +359,26 @@ def quantile_plot(data, quantiles= [0.25, 0.5, 0.75], axis= 1, arr_index =
     return ax, quantiles_df
 
 def one2one_plot(df_obs, df_simu, metrics = ["R^2"], show_metrics=True, ax =
-                 None, equal_aspect = False, show_density = False,
+                 None, equal_aspect = True, show_density = False,
                  decompose_KGE = False, **kwargs):
     """One to One plot with a line.
     Parameters:
         df_obs, df_simu are Pandas series.
         metric, list or 'all'
             available metrics are: pearsonr, R2, RMSE, KGE,...
+        show_metrics, bool
+            Show metrics on the plot if True.
+        ax, axis
+            Create a new one if None
+        equal_aspect, bool
+            Make x and y axis equal aspect ratio if True
+        show_density, bool
+            Show the density plot if True. This is useful when 
+            data is overlapped.
+        decompose_KGE, bool
+            Decompose the KGE into three components (e.g., r, alpha and beta)
+    Returns:
+        A one to one plot with metrics.
     """
     assert(isinstance(df_obs, pd.Series)) 
     assert(isinstance(df_simu, pd.Series)) 

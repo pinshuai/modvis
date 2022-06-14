@@ -16,12 +16,58 @@ import matplotlib.patches as mpatches
 # from calendar import isleap
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s: %(message)s')
-
+import dataretrieval.nwis as nwis
 import sys
 # sys.path.append("..")
 
 # import objectivefunctions as ofs
 import modvis.objectivefunctions as ofs
+
+def load_nwis(service='dv', parameterCd='00060', SI_unit=True, insert_NA=True, rm_tz=True, **kwargs):
+    """Load USGS streaflow from NWIS.
+        Parameters:
+            service, str
+                NWIS service including dv, iv...
+            parameterCd, str
+                NWIS  parameter code including 00060, 00065, 00010 ...
+            SI_unit, bool
+                convert units to SI if true
+            insert_NA, bool
+                insert NAs where data is missing. Defaults to True.
+            rm_tz, bool
+                Remove time zone information. This may be necessary when comparing time series with vs. without time zones. 
+                For sub-daily data, recommend to keep the timezone information.
+            Other kwargs are the same in nwis.get_record().
+            
+        Returns:
+            A dataframe that is cleaned and standardized. 
+    """
+    df = nwis.get_record(service=service, parameterCd=parameterCd, **kwargs)
+    assert len(df) > 0, "Returned empty df!"
+    
+    # remove outliers and nan index
+    df[df.iloc[:, 0] < 0 ] = np.nan
+    df = df[df.index.notnull()]
+    
+    if SI_unit:
+        if parameterCd == "00060" and '00060_Mean' in df.columns:
+            # convert discharge from ft^3/s to m^3/d
+            df['Discharge [m^3/d]'] = df['00060_Mean'] * 2446.58
+            df = df[['Discharge [m^3/d]']]
+    
+    if rm_tz:
+        df.reset_index(inplace=True)
+        df['datetime'] = pd.to_datetime(df['datetime'])
+        df['datetime'] = df['datetime'].dt.tz_localize(None)
+        df.set_index('datetime', inplace=True)
+        
+    if insert_NA and service=='dv':
+        date_ind = pd.date_range(start = df.index[0], end = df.index[-1])
+        new_df = pd.DataFrame(index = date_ind)
+        df = df.join(new_df, how = 'outer')   
+        
+    return df
+
 
 def mark_start_end(df, label = None):
     """Mark the start and end of the dateframe time series."""
