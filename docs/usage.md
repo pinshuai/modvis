@@ -4,9 +4,8 @@ Below is a list of functions available in `modvis`.
 
 - To load visdump file:
 
-```{note}
-For subsurface, use `domain=None` because it load subsurface by default. `columnar=True` is required for reordering the cells to column-based for easy plotting. 
-```
+!!! note
+    For subsurface, use `domain=None` because it load subsurface by default. `columnar=True` is required for reordering the cells to column-based for easy plotting. 
 
 ```python
 import modvis
@@ -20,9 +19,8 @@ modvis.ats_xdmf.VisFile(model_dir='.', domain='surface', load_mesh=True)
 
 - To plot surface ponded depth:
 
-```{note}
-You can use either numbering (0,1,2...) or datetime string (e.g., "2015-10-01") for the `time_slice`.
-```
+!!! note
+    You can use either numbering (0,1,2...) or datetime string (e.g., "2015-10-01") for the `time_slice`.
 
 
 ```python

@@ -29,11 +29,14 @@ plugins:
           
 markdown_extensions:
     - attr_list
+    - def_list
     - pymdownx.superfences
     - pymdownx.highlight:
           linenums: true
     - toc:
           permalink: true
+    - admonition
+    - pymdownx.details
 
 # extra:
 #     analytics:
