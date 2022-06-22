@@ -12,7 +12,7 @@ jobs:
             - uses: actions/checkout@v2
             - uses: actions/setup-python@v2
               with:
-                  python-version: 3.10.0
+                  python-version: 3.9
             - name: Install dependencies
               run: |
                   python -m pip install --upgrade pip
@@ -21,6 +21,7 @@ jobs:
             - name: PKG-TEST
               run: |
                   python -m unittest discover tests/
-            - run: python -m pip install --upgrade pip
-            - run: pip install mkdocs mkdocstrings-crystal mkdocs-material mkdocstrings mkdocs-git-revision-date-plugin mkdocs-jupyter ipykernel
-            - run: mkdocs gh-deploy 
+            - run: pip install -r requirements_docs.txt
+            # - run: python -m pip install --upgrade pip
+            # - run: pip install mkdocs mkdocstrings-crystal mkdocs-material mkdocstrings mkdocs-git-revision-date-plugin mkdocs-jupyter ipykernel
+            - run: mkdocs gh-deploy --force 
