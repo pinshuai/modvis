@@ -12,12 +12,12 @@ jobs:
             - uses: actions/checkout@v2
             - uses: actions/setup-python@v2
               with:
-                  python-version: 3.6
+                  python-version: 3.9
             - name: Install dependencies
               run: |
                   python -m pip install --upgrade pip
                   pip install --user --no-cache-dir Cython
-                  pip install --user -r requirements.txt
+                  # pip install --user -r requirements.txt
             - name: PKG-TEST
               run: |
                   python -m unittest discover tests/
