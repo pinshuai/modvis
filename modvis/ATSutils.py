@@ -478,7 +478,8 @@ def surfaceArea(model_dir):
             a_key = list(f['surface-cell_volume.cell.0'].keys())[0] # pick any timestamp
             surface_area = f['surface-cell_volume.cell.0'][a_key][:].sum() # m^2  
     else:
-        raise KeyError("*surface_data.h5 could not be found!")
+        path = os.path.join(model_dir, "*surface_data.h5")
+        raise KeyError(f"*surface_data.h5 could not be found in {path}!")
     return surface_area
     
 def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
