@@ -486,7 +486,7 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
                       'D', UTC_time = None, resample_freq = None, canopy =
                       True, origin_date = "1980-01-01", noleap = True, cumsum = True,
                       restart_dir = None, out_file = None, plot = False,
-                      subcatchment=False, catchment_area=None,
+                      catchment_area=None,
                       **kwargs):
     """read ATS output files, new dataframe format
     Parameters:
@@ -518,7 +518,7 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
         datetime, data, and dataframe(datetime, data)
     
     """
-    if subcatchment:
+    if catchment_area is not None:
         surface_area = catchment_area
     else:
         surface_area = surfaceArea(model_dir)
