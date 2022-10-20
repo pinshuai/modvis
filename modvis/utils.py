@@ -23,6 +23,31 @@ import sys
 # import objectivefunctions as ofs
 import modvis.objectivefunctions as ofs
 
+def days_between(d0,d1, noLeap=False):
+    """calculates days between two dates
+        Parameters:
+            d0, datetime.date()
+                starting date
+            d1, datetime.date() object
+                ending date
+            noLeap, bool
+                whether to consider leap years. 
+                If True, only 365 days are considered each year.
+                
+        Returns:
+            days in between dates.
+    """
+    delta = d1-d0
+    if noLeap:
+        # remove one day from leap year 
+        start_year = d0.year
+        end_year = d1.year
+        leap_years = list(range(start_year + (4 - start_year % 4), end_year + 1, 4))
+        
+        return delta.days - len(leap_years)
+    else:
+        return delta.days
+
 def load_nwis(service='dv', parameterCd='00060', SI_unit=True, insert_NA=True, rm_tz=True, **kwargs):
     """Load USGS streaflow from NWIS.
         Parameters:
