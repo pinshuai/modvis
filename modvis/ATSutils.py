@@ -309,7 +309,9 @@ def plot_timestep(work_dir, fname_run_log=None):
     
     try:
         walltime_per_year = walltime / nyear
-        ax.set_title(f"Cores: {ncores}; wallclock time [h]: {walltime:.2f}; ave ts [h]: {ave_dt:.2f}; ave walltime/yr [h]: {walltime_per_year:.2f}")
+        title=f"Cores: {ncores}; wallclock time [h]: {walltime:.2f}; ave ts [h]: {ave_dt:.2f}; ave walltime/yr [h]: {walltime_per_year:.2f}"
+        ax.set_title(title)
+        logging.info(title)
     except:
         pass
 
