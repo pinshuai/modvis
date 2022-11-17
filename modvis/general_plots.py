@@ -192,7 +192,19 @@ def corrMatrix_plot(df, **kwargs):
                )    
     plt.title('Correlation Matrix', fontsize = 14)
 def varsComp_plot(dfs, variables, labels, colors, linestyles=None, axes=None, **kwargs):
-    """compare variables across different model runs"""
+    """compare variables across different model runs.
+    Parameters:
+    ---
+        dfs, list of dataframes
+        variables, list of variables
+        labels, list of labels for legend
+        colors, list of colors for line plot
+
+    Returns:
+    ---
+        None or (fig, axes)
+    
+    """
     nvar = len(variables)
     if axes is None:
         fig, axes = plt.subplots(nvar,1, figsize=(8,3*nvar), sharex = True)
@@ -205,6 +217,8 @@ def varsComp_plot(dfs, variables, labels, colors, linestyles=None, axes=None, **
     if nvar > 1:
         for ax, var in zip(axes, variables):
             for i in np.arange(len(dfs)):
+                idf = dfs[i][var]
+                assert idf.empty is False, f"{var} does not exist in {i+1}th df!"
                 ax.plot(var, linestyles[i], color = colors[i], data = dfs[i], label = labels[i], **kwargs)
                 ax.set_ylabel(var, fontsize = 12)
                 ax.set_xlabel('')
@@ -213,6 +227,8 @@ def varsComp_plot(dfs, variables, labels, colors, linestyles=None, axes=None, **
         ax = axes
         var = variables[0]
         for i in np.arange(len(dfs)):
+            idf = dfs[i][var]
+            assert idf.empty is False, f"{var} does not exist in {i+1}th df!"
             ax.plot(var, linestyles[i], color = colors[i], data = dfs[i], label = labels[i], **kwargs)
             ax.set_ylabel(var, fontsize = 12)
             ax.set_xlabel('')
