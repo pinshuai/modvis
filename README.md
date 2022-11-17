@@ -27,6 +27,12 @@
 pip install modvis
 ```
 
+If you want to run the latest version of the code, you can install from git:
+
+```
+pip install -U git+https://github.com/pinshuai/modvis.git
+```
+
 ## Quick start
 
 To plot variables on the surface mesh:
