@@ -480,8 +480,11 @@ def surfaceArea(model_dir):
     h5_files = glob.glob(os.path.join(model_dir, "*surface_data.h5"))
     if len(h5_files) == 1:
         with h5py.File(h5_files[0]) as f:
-            a_key = list(f['surface-cell_volume.cell.0'].keys())[0] # pick any timestamp
-            surface_area = f['surface-cell_volume.cell.0'][a_key][:].sum() # m^2  
+            keys = list(f.keys())
+            # find group name starts with 'surface-cell_volume'
+            groupname = np.array(keys)[[key.startswith('surface-cell_volume') for key in keys]][0]
+            a_key = list(f[groupname].keys())[0] # pick any timestamp
+            surface_area = f[groupname][a_key][:].sum() # m^2  
     else:
         path = os.path.join(model_dir, "*surface_data.h5")
         raise KeyError(f"*surface_data.h5 could not be found in {path}!")
