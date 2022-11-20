@@ -294,14 +294,15 @@ def plot_timestep(work_dir, fname_run_log=None):
     assert len(dt) > 0, "0 timestep found!"
     time_dt = np.array([float(i) for i in time_dt])
     nyear = np.ptp(time_dt)/365 # cnvt d to year
+    logging.info(f"Start day: {time_dt[0]}d; End day: {time_dt[-1]}d; Finished simulation time: {nyear*365}d")
     
     step_dt = [float(i) for i in step_dt] 
     df = pd.DataFrame(np.stack([step_dt, dt, time_dt]).T, columns = ['cycle', 'timestep [d]', 'times [d]'])
     ave_dt = np.array(dt).mean()*24 # convert from day to hour
-    
+    logging.info(f"Average timestep: {ave_dt} h")
+
     # plot
     fig,ax = plt.subplots(1,1, figsize=(8,6))
-
     ax.plot(step_dt, dt, 'k', lw = 0.5)
     ax.set_ylabel('Timestep (day)')
     ax.set_xlabel('Cycle')
@@ -312,7 +313,9 @@ def plot_timestep(work_dir, fname_run_log=None):
         title=f"Cores: {ncores}; wallclock time [h]: {walltime:.2f}; ave ts [h]: {ave_dt:.2f}; ave walltime/yr [h]: {walltime_per_year:.2f}"
         ax.set_title(title)
         logging.info(title)
+        
     except:
+        logging.info("Could not find total wallclock time. Job may not finish.")
         pass
 
     ax1 = ax.twinx()
