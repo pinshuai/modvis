@@ -97,7 +97,7 @@ class VisFile:
             elif return_time_unit == 's':
                 time_factor = 365.25 * 24 * 3600
             else:
-                raise ValueError("Invalid time unit '{}': must be one of 'yr', 'noleap', 'd', 'hr', or 's'".format(return_time_unit))
+                raise ValueError("Invalid return time unit '{}': must be one of 'yr', 'noleap', 'd', 'hr', or 's'".format(return_time_unit))
         elif model_time_unit == 'd':
             if return_time_unit == 'yr':
                 time_factor = 1.0 / 365.25
@@ -110,8 +110,9 @@ class VisFile:
             elif return_time_unit == 's':
                 time_factor = 24 * 3600
             else:
-                raise ValueError("Invalid time unit '{}': must be one of 'yr', 'noleap', 'd', 'hr', or 's'".format(return_time_unit))
-
+                raise ValueError("Invalid return time unit '{}': must be one of 'yr', 'noleap', 'd', 'hr', or 's'".format(return_time_unit))
+        else:
+            raise ValueError("Invalid model time unit '{}': must be one of 'yr', 'd'".format(model_time_unit))
         self.time_factor = time_factor
         self.time_unit = return_time_unit
 
