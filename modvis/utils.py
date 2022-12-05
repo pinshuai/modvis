@@ -7,7 +7,7 @@ import pandas as pd
 import h5py
 from math import cos, sin, asin, sqrt, radians
 from sklearn.metrics import mean_squared_error
-from scipy.stats.stats import pearsonr
+from scipy.stats.stats import pearsonr, mannwhitneyu
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import time
@@ -526,3 +526,23 @@ def array2asc(file_array, file_asc, nx=600, ny=600, dx=100, model_origin = [0,0]
     print('Exported ASCII file is in {}'.format(file_asc))
     
     return None
+
+def mann_whitney_test(data1, data2, alpha=0.05):
+    """
+    perform a Mann-Whitney test, and return statistics and p-value
+    Parameters:
+        x: data1, dataframe timeseries
+        y: data2, dataframe timeseries
+        alpha: significance factor, default 0.05
+    Returns:
+        stat, p
+    """
+    stat, p = stats.mannwhitneyu(data1, data2)
+    print('Statistics=%.3f, p=%.3f' % (stat, p))
+    if p > alpha:
+        print('Same distributions (fail to reject H0)')
+    else:
+        print('Different distributions (reject H0)')
+    return stat, p
+        
+    return stat, p
