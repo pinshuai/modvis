@@ -537,7 +537,7 @@ def mann_whitney_test(data1, data2, alpha=0.05):
     Returns:
         stat, p
     """
-    stat, p = stats.mannwhitneyu(data1, data2)
+    stat, p = mannwhitneyu(data1, data2)
     print('Statistics=%.3f, p=%.3f' % (stat, p))
     if p > alpha:
         print('Same distributions (fail to reject H0)')
