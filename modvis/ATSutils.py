@@ -336,8 +336,12 @@ def rmLeapDays(time_ats, origin_date = "1980-01-01", noleap = True, freq = "D"):
             list of days or hours
         origin_date: datetime str in "%Y-%m-%d", default is 1980-1-1
             original datetime. In ATS, this depends on the starting date of Daymet. 
+        noleap: bool, default is True
+            if True, remove Dec31 from leap years
+        freq: str, default is "D"
+            frequency of time_ats. Either "D" or "H"
     Returns:
-        datetime array with leap days removed.
+        datetime array.
     """
     # round to the nearest int, this maybe necessary for
     # floating point erros
@@ -532,7 +536,7 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
         surface_area = surfaceArea(model_dir)
     assert(surface_area is not None)
 
-    df = load_output(model_dir, WB_filename, timestep, origin_date, **kwargs)
+    df = load_output(model_dir, WB_filename, timestep, origin_date, noleap=noleap, **kwargs)
     
     if restart_dir is not None:
         assert(type(restart_dir) is list)
@@ -719,7 +723,7 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
         return df
 
 def load_output(model_dir, WB_filename, timestep = 'D', origin_date =
-                '1980-01-01', **kwargs):
+                '1980-01-01', noleap=True, **kwargs):
     """read ATS output files
     Parameters:
         model_dir: str
@@ -737,14 +741,14 @@ def load_output(model_dir, WB_filename, timestep = 'D', origin_date =
     df = pd.read_csv(os.path.join(model_dir, WB_filename), comment='#')
     if timestep == 'D':
         # get datetime, convert seconds to days
-        datetime_noLeap = rmLeapDays(df['time [d]'], freq='D', origin_date =
-                                     origin_date, **kwargs)
+        datetime_ats = rmLeapDays(df['time [d]'], freq='D', origin_date =
+                                     origin_date, noleap=noleap, **kwargs)
     elif timestep == 'H':
-        datetime_noLeap = rmLeapDays(df['time [h]'], freq='H', origin_date =
-                                     origin_date, **kwargs)
+        datetime_ats = rmLeapDays(df['time [h]'], freq='H', origin_date =
+                                     origin_date, noleap=noleap, **kwargs)
     else:
         raise ValueError(f"Freq: {timestep} is not supported!")
-    df['datetime'] = datetime_noLeap
+    df['datetime'] = datetime_ats
     df.set_index('datetime', inplace=True, drop=True)
     
     return df
