@@ -376,7 +376,7 @@ def quantile_plot(data, quantiles= [0.25, 0.5, 0.75], axis= 1, arr_index =
 
 def one2one_plot(df_obs, df_simu, metrics=["R^2"], show_metrics=True,
                 ax=None, equal_aspect=True, show_density=False,
-                 decompose_KGE=False, start_date=None, end_date=None, **kwargs):
+                 decompose_KGE=False, start_date=None, end_date=None, dropzero=False, **kwargs):
     """One to One plot with a line.
     Parameters:
         df_obs, df_simu are Pandas series.
@@ -397,6 +397,8 @@ def one2one_plot(df_obs, df_simu, metrics=["R^2"], show_metrics=True,
             The start of the datetime index. e.g., "2016-10-01"
         end_date, str
             The end of the datetime index. e.g., "2020-10-01"
+        dropzero, bool
+            Drop zero values from the data before calculating metrics. This is useful when artifacts are present in the data.
     Returns:
         A one to one plot with metrics.
     """
@@ -410,12 +412,12 @@ def one2one_plot(df_obs, df_simu, metrics=["R^2"], show_metrics=True,
         df_simu = df_simu.loc[start_date:end_date]
 
     metric_dict, df = utils.get_metrics(df_obs.index, df_obs.values, 
-                 df_simu.index, df_simu.values, metrics = metrics)
+                 df_simu.index, df_simu.values, metrics = metrics, dropzero=dropzero)
     if "mKGE" in metrics or 'KGE' in metrics: 
         if decompose_KGE is True:
             KGE_metric, _ = utils.get_metrics(df_obs.index, df_obs.values, 
-                 df_simu.index, df_simu.values, metrics = ['mKGE'], return_all
-                                         = True)
+                 df_simu.index, df_simu.values, metrics = ['mKGE'], 
+                 return_all= True, dropzero=dropzero)
             print(f"mKGE: {KGE_metric['mKGE'][0]}, cc:  {KGE_metric['mKGE'][1]}, alpha:  {KGE_metric['mKGE'][2]}, beta:  {KGE_metric['mKGE'][3]}")
     
     max_ = max(df['obs'].values.max(), df['simu'].values.max())
