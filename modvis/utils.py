@@ -325,8 +325,9 @@ def print_xml(file):
     print(''.join(file))
 
 def get_metrics(obs_t, obs, simu_t, simu, metrics = 'all', start_date = None,
-                end_date = None, epsilon=0, **kwargs):
-    """compute R2 and RMSE between simulated and observed
+                end_date = None, epsilon=0, dropzero=False, **kwargs):
+    """
+    Calculate metrics between simulated and observed data.
     Parameters:
         obs_t: list or array
             observed datetime series
@@ -337,12 +338,17 @@ def get_metrics(obs_t, obs, simu_t, simu, metrics = 'all', start_date = None,
         simu: list or array
             simulated numeric sereis
         start_date: datetime object
-            starting date for RMSE and R^2 calculation
+            starting date for metric calculation
         end_date: datetime object
-            ending date for RMSE and R^2 calculation
+            ending date for metric calculation
         epsilon: float
-            small number added to the data to avoid zero issue when using log transformation (e.g., logNSE). Recommended value is 1/100 of the mean observed flow (see Santos et al., 2018 HESS for discussion).
-
+            small number added to the data to avoid zero issue when using log transformation (e.g., logNSE). 
+            Recommended value is 1/100 of the mean observed flow (see Santos et al., 2018 HESS for discussion).
+        dropzero: bool
+            if True, drop zero values in observed data. This is useful for dataframe with artifacts of zero values 
+            (e.g., when using the restarted output from ATS).
+        **kwargs: keyword arguments
+            keyword arguments {return_all = True} for KGE components calculation
     Returns:
         dict of metrics and dataframe used.
     
@@ -363,6 +369,10 @@ def get_metrics(obs_t, obs, simu_t, simu, metrics = 'all', start_date = None,
     df2.dropna(inplace = True)
     
     df = df1.merge(df2, how='inner', on = 'datetime')
+
+    if dropzero:
+        # drop rows with any zero values
+        df = df[(df != 0).all(1)]
     
     if start_date != None or end_date != None:
         df = df[df.datetime < end_date].copy()
@@ -389,6 +399,7 @@ def get_metrics(obs_t, obs, simu_t, simu, metrics = 'all', start_date = None,
         elif i == 'NSE':
             val = ofs.nashsutcliffe(df['obs'].values, df['simu'].values)
         elif i == 'logNSE':
+            # default epsilon is 1/100 of the mean observed flow
             if epsilon == 0:
                 epsilon = df['obs'].mean() / 100
             val = ofs.lognashsutcliffe(df['obs'].values, df['simu'].values, epsilon=epsilon)
