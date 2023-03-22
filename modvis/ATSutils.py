@@ -26,6 +26,40 @@ rho_m = 55500 # moles/m^3, water molar density
 rho = 997
 g = 9.80665
 
+def get_8dayET(obs_et, simu_et, dates):
+    """convert daily ET to cumulative 8-day ET using MODIS data
+    Parameters:
+        obs_et, dataframe with single column
+        simu_et, dataframe with single column
+        
+    Returns:
+        df_8d_et, dataframe with two columns: simu ET and obs ET (both in mm/8d)
+    """
+    df_et = simu_et.loc[dates[0]:dates[1]].copy()
+
+    # time_ind = df_et.dropna().index
+    time_ind = obs_et.loc[dates[0]:dates[1], :].index
+
+    # df_8d_et = df_et.dropna().copy()
+    df_8d_et = df_et.reindex(time_ind).copy()
+    for i in np.arange(len(time_ind))[:]:
+        itime = time_ind[i]
+        if i == 0:
+            btime = df_et.index[0]
+        else:
+            btime = time_ind[i-1]
+
+        istart = list(df_et.index).index(btime)
+        iend = list(df_et.index).index(itime)    
+        # `loc` includes both ends, but `iloc` does not include end bound!
+        isum = df_et.iloc[istart:iend+1, :].sum(min_count = 1) # return NA is sum() contains NA
+        df_8d_et.loc[itime, :] = isum.values    
+        
+    df_8d_et['obs ET [mm/8d]'] = obs_et.loc[time_ind[0] : time_ind[-1], :].values
+    df_8d_et.rename(columns = {df_8d_et.columns[0]:'simu ET [mm/8d]'}, inplace=True)
+    
+    return df_8d_et
+
 def get_snow_cover(model_dir, **kwargs):
     """Calculate snow cover data from model output. Return a dataframe with snow cover percentage.
     Parameters: 
