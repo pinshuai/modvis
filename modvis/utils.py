@@ -94,27 +94,36 @@ def load_nwis(service='dv', parameterCd='00060', SI_unit=True, insert_NA=True, r
     return df
 
 
-def mark_start_end(df, label = None):
-    """Mark the start and end of the dateframe time series."""
-    ranges = []
-    # Start of good data block defined by a number preceeded by a NaN
-    start_mark = (df.notnull() & df.shift().isnull())
-    start = df[start_mark].index
+def mark_start_end(df, freq='1D'):
+    """Mark the start and end of the dateframe time series. This can be used in combination with
+    utils.gantt_plot().
 
-    # End of good data block defined by a number followed by a Nan
-    end_mark = (df.notnull() & df.shift(-1).isnull())
-    end = df[end_mark].index  
-    
-    for s, e in zip(start, end):
-        if label is None:
-            ranges.append((s, e))
-            # ranges = pd.DataFrame(ranges, columns=['start', 'end']) 
-        else:
-            ranges.append((label, s, e))
-            # ranges = pd.DataFrame(ranges, columns=['id', 'start', 'end']) 
-            # ranges.set_index('id', inplace = True)
-    
-    return ranges
+    Parameters:
+        df: pandas.DataFrame
+            dataframe with datetime index and at least one column of data
+        freq: str
+            frequency of the data. Defaults to '1D' (daily).
+
+    Returns:
+        start_dates: list of datetime
+        end_dates: list of datetime
+    """
+
+    # drop NaN data first
+    df.dropna(inplace=True)
+    # create a mask for missing data (assumes data is spaced evenly)
+    mask = df.index.to_series().diff() > pd.Timedelta(freq)    
+
+    # find the date before the mask (i.e. new starting date), will get new ending date
+    end_idx = list(np.where(mask.values)[0] - 1)
+
+    # find the start and end dates for each available time period
+    start_dates = [df.index[0]] + df.index[mask].to_list()
+    end_dates = df.index[end_idx].to_list() + [df.index[-1]]
+
+    assert len(start_dates) == len(end_dates)
+
+    return start_dates, end_dates
 
 def K_perm_conversion(K=None, k=None):
     """convert between hydraulic conductivity (K) and permeability (k)
