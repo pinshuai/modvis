@@ -7,7 +7,7 @@ import pandas as pd
 import h5py
 from math import cos, sin, asin, sqrt, radians
 from sklearn.metrics import mean_squared_error
-from scipy.stats.stats import pearsonr, mannwhitneyu
+from scipy.stats import pearsonr, mannwhitneyu
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import time
@@ -22,6 +22,45 @@ import sys
 
 # import objectivefunctions as ofs
 import modvis.objectivefunctions as ofs
+
+def insertNA(df, dt_col, freq=None):
+    '''
+    Automatically insert NAs for missing data.
+    Arguments:
+      - df. A dataframe contains the missing data.
+      - dt_col. Column name in the df which contains time series.
+    '''
+    df[dt_col] = pd.to_datetime(df[dt_col])
+    ## remove duplicates in the datetime index
+#     df = df[~df[dt_col].duplicated()]
+    df.drop_duplicates(subset=dt_col, inplace=True)
+    df.sort_values(by = dt_col, inplace = True)
+    # drop na
+    # df = df.loc[df.index.notnull()]
+    df.dropna(subset=[dt_col], inplace=True)
+    ## create a new index
+    start_time = df[dt_col].iloc[0]
+    end_time = df[dt_col].iloc[-1]
+    # ic(start_time)
+    # ic(end_time)
+    
+    # find frequency
+    if freq is None:
+        ## get the highest frequency in sec
+        freq_list = df[dt_col].diff().dt.seconds.value_counts()
+
+        # the first freq with the most samples on the list may not be the highest freq
+        if freq_list.index[0] == freq_list.index.min():
+            freq = freq_list.index[0]
+        else:
+            freq = freq_list.index.min()
+    logging.info(f'Found the highest frequency: {freq} sec')
+    new_index = pd.date_range(start_time, end_time, freq=pd.DateOffset(seconds = freq),
+                              name = dt_col)
+    ## reindex and reset index
+    df = df.set_index(dt_col).reindex(new_index).reset_index()
+
+    return df
 
 def days_between(d0,d1, noLeap=False):
     """calculates days between two dates
