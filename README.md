@@ -33,6 +33,14 @@ If you want to run the latest version of the code, you can install from git:
 pip install -U git+https://github.com/pinshuai/modvis.git
 ```
 
+Alternatively, if you want to debug and test the code, you can clone the repository and install from source:
+
+```
+git clone https://github.com/pinshuai/modvis.git
+cd modvis
+pip install -e .
+```
+
 ## Quick start
 
 To plot variables on the surface mesh:
