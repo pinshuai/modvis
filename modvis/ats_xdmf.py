@@ -32,7 +32,7 @@ def valid_mesh_filename(domain, format=None):
 
 class VisFile:
     """Class managing the reading of ATS visualization files."""
-    def __init__(self, directory='.', domain=None, prefix='ats_vis', model_time_unit='yr', return_time_unit='d', load_mesh=False, **kwargs):
+    def __init__(self, directory='.', domain=None, prefix='ats_vis', model_time_unit='yr', return_time_unit='d', load_mesh=False, ats_version='dev', **kwargs):
         """Create a VisFile object.
 
         Parameters
@@ -110,6 +110,12 @@ class VisFile:
         self.loadTimes()
         self.map = None
         self.version = ats_version
+        if load_mesh:
+            self.loadMesh(**kwargs)
+            etype, vertex_coords, conn = meshXYZ(self.directory, self.mesh_filename)
+            self.etype = etype
+            self.vertex_xyz = np.array(list(vertex_coords.values()))
+            self.conn = conn        
         
     def __enter__(self):
         return self
