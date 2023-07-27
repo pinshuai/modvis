@@ -26,7 +26,7 @@ test_requirements = [ ]
 
 setup(
     author="Pin Shuai",
-    author_email='pinshuai.phd@gmail.com',
+    author_email='pin.shuai@usu.edu',
     python_requires='>=3.7',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
@@ -52,6 +52,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/pinshuai/modvis',
-    version='0.0.6',
+    version='0.0.7',
     zip_safe=False,
 )
