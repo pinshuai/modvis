@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.0.7 - July 27, 2023
+- Updated VisFile class to work with ats version >1.5
+- Merged ats_xdmf.py from ats repo
+
 ## v0.0.3 - May 18, 2022
 
 **Improvements**
