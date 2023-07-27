@@ -264,7 +264,7 @@ def write_spinup_steadystate(config, main_xml, mean_precip=1e-8, **kwargs):
 
     # make a run directory
     try:
-        os.mkdir(os.path.join('..', config[f'spinup_steadystate_rundir']))
+        os.mkdir(os.path.join('..', '..', 'model', config[f'spinup_steadystate_rundir']))
     except FileExistsError:
         pass
 
@@ -360,7 +360,7 @@ def write_transient(config, main_xml, start_date, end_date, cyclic_steadystate=F
     
     # update the restart filenames
     for var in asearch.findall_path(template_xml, ['initial condition', 'restart file']):
-        var.setValue(os.path.join(config[f'{previous}_rundir'], 'checkpoint_final.h5'))
+        var.setValue(os.path.join('..', config[f'{previous}_rundir'], 'checkpoint_final.h5'))
 
     # update the observations list
     obs = next(i for (i,el) in enumerate(template_xml) if el.get('name') == 'observations')
@@ -377,7 +377,7 @@ def write_transient(config, main_xml, start_date, end_date, cyclic_steadystate=F
 
     
     try:
-        os.mkdir(os.path.join('..', config[f'{prefix}_rundir']))
+        os.mkdir(os.path.join('..', '..', 'model', config[f'{prefix}_rundir']))
     except FileExistsError:
         pass
 
