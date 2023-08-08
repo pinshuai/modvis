@@ -206,8 +206,9 @@ def plot_gw_surface(visfile, origin_date="1980-01-01", time_slice = -1, return_h
     conn = visfile.conn
     map = visfile.map
 
-    t = visfile.times
-    times = rmLeapDays(t)
+#    t = visfile.times
+#    times = rmLeapDays(t) + pd.
+    times = get_time(vis_file, origin_date=origin_date)
 
     try:
         time_idx = int(time_slice)
