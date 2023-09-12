@@ -85,8 +85,7 @@ def plot_water_content(vis_data,
     conn = vis_data.conn
     map = vis_data.map
 
-    times = vis_data.times
-    datetime = rmLeapDays(times, origin_date = origin_date)
+    datetime = get_time(vis_data, origin_date=origin_date)
     
     sat = vis_data.getArray("saturation_liquid.cell.0")
     por = vis_data.getArray("porosity.cell.0")
@@ -206,8 +205,9 @@ def plot_gw_surface(visfile, origin_date="1980-01-01", time_slice = -1, return_h
     conn = visfile.conn
     map = visfile.map
 
-    t = visfile.times
-    times = rmLeapDays(t)
+#    t = visfile.times
+#    times = rmLeapDays(t) + pd.
+    times = get_time(visfile, origin_date=origin_date)
 
     try:
         time_idx = int(time_slice)
