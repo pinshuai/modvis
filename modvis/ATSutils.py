@@ -787,7 +787,7 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
                 ax.xaxis.set_ticklabels([])
 
 
-        fig, axes = plt.subplots(len(domain_names) + 1, 1, figsize=(8, 2.5*len(domain_names)))
+        fig, axes = plt.subplots(len(domain_names) + 1, 1, figsize=(8, 2.5*len(domain_names)), sharex=True)
  
         # plot incoming and outgoing fluxes
         ax = axes[0]
@@ -813,8 +813,7 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
         ax.set_xlim(df.index[0], df.index[-1])
         ax.set_xlabel('')
 
-
-
+        # plot all other domains
         for i, domain in enumerate(domain_names):
             ax = axes[i + 1]
             cumu_plot(domain, df, ax)
