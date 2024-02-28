@@ -306,9 +306,11 @@ def plot_timestep(work_dir, fname_run_log=None):
         if "Cycle" in line and "Time" in line: 
             splitline = re.split("\s+|\x1b|,", line)
             # print(splitline)
+            # search for keywords "Cycle" and "Time", and "dt" in each line
             cycle_idx = splitline.index("Cycle")
             time_idx = splitline.index("Time")
             dt_idx = splitline.index("dt")
+            # find the position of the timestep, time and dt. This may change in different ATS version.
             istep = splitline[cycle_idx + 2]        
             itime = splitline[time_idx + 3]        
             idt = splitline[dt_idx + 3]
@@ -316,13 +318,21 @@ def plot_timestep(work_dir, fname_run_log=None):
             step_dt.append(istep)
             time_dt.append(itime)  
             
+        # find computing time and #of cores used 
+        # find #of cores used
         if "TimeMonitor" in line and "|" in line:
             splitline = re.split("\s+|,", line)
             ncores = splitline[-3]
-            
+        elif "TimeMonitor" in line:
+            splitline = re.split("\s+|,", line)
+            ncores = splitline[-2]
+        # find wallclock time. This may change in different ATS version.
         if "Simulation Driver  |  cycle" in line:
             splitline = re.split("\s+|,", line) 
             walltime = float(splitline[4])/3600 #convert s to h
+        elif "wallclock duration" in line:
+            splitline = re.split("\s+|,", line) 
+            walltime = float(splitline[1])/3600
 
     dt = np.array([float(i) for i in dt])
     assert len(dt) > 0, "0 timestep found!"

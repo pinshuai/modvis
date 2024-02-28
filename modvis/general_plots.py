@@ -63,6 +63,9 @@ def plot_FDC(dfs, labels, colors, linestyles=None, start_date=None, end_date=Non
             Column variable if provided
         ax, axis
             axis for plotting
+
+    Returns:
+        fig, ax if ax is None.
     """
     ndf = len(dfs)
 
@@ -379,7 +382,7 @@ def one2one_plot(df_obs, df_simu, metrics=["R^2"], show_metrics=True,
                  decompose_KGE=False, start_date=None, end_date=None, dropzero=False, **kwargs):
     """One to One plot with a line.
     Parameters:
-        df_obs, df_simu are Pandas series.
+        df_obs, df_simu are Pandas time series with datetime as index.
         metric, list or 'all'
             available metrics are: pearsonr, R2, RMSE, KGE,...
         show_metrics, bool
