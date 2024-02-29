@@ -325,14 +325,16 @@ def plot_timestep(work_dir, fname_run_log=None):
             ncores = splitline[-3]
         elif "TimeMonitor" in line:
             splitline = re.split("\s+|,", line)
-            ncores = splitline[-2]
+            # print(splitline)
+            ncores = splitline[-3]
         # find wallclock time. This may change in different ATS version.
         if "Simulation Driver  |  cycle" in line:
             splitline = re.split("\s+|,", line) 
             walltime = float(splitline[4])/3600 #convert s to h
-        elif "wallclock duration" in line:
+        elif "4: solve" in line:
             splitline = re.split("\s+|,", line) 
-            walltime = float(splitline[1])/3600
+            # print(splitline)
+            walltime = float(splitline[2])/3600
 
     dt = np.array([float(i) for i in dt])
     assert len(dt) > 0, "0 timestep found!"
