@@ -905,7 +905,7 @@ def load_output(model_dir, WB_filename, timestep = 'D', origin_date =
         datetime, data, and dataframe(datetime, data)
     
     """
-    df = pd.read_csv(os.path.join(model_dir, WB_filename), comment='#')
+    df = pd.read_csv(os.path.join(model_dir, WB_filename), sep='\s+',  comment='#')
     if timestep == 'D':
         # get datetime, convert seconds to days
         datetime_ats = rmLeapDays(df['time [d]'], freq='D', origin_date =
