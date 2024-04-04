@@ -20,7 +20,24 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 # sys.path.append("..")
 import modvis.utils as utils
 
-def gantt_plot(dfs, ax=None, **kwargs):
+def gantt_plot(ranges, **kwargs):
+    """Plot Gantt plot given start and end date.
+    Parameters:
+        ranges, DataFrame
+        Dataframe with index as name/id, two separate columns ['start', 'end']
+    
+    """
+    fig,ax = plt.subplots(1,1, figsize=(8,6))
+
+
+    ax = ax.xaxis_date()
+    ax = plt.hlines(ranges.index,
+                    mdates.date2num(ranges['start']),
+                    mdates.date2num(ranges['end']), **kwargs)
+    fig.tight_layout()
+
+
+def gantt_plot_from_df(dfs, ax=None, **kwargs):
     """
     Plot Gantt plot given start and end date.
 
@@ -52,10 +69,12 @@ def gantt_plot(dfs, ax=None, **kwargs):
             start_dates, end_dates = utils.mark_start_end(df)
             for i in range(len(start_dates)):
                 ranges.append((index, start_dates[i].to_pydatetime(), end_dates[i].to_pydatetime()))
-    elif ndf == 1 and isinstance(dfs, pd.DataFrame):
+    elif ndf == 1 and isinstance(dfs[0], pd.DataFrame):
         ranges = []
         df = dfs[0]
+        # df = df[df.columns[0]]
         start_dates, end_dates = utils.mark_start_end(df)
+        # print(len(start_dates))
         for i in range(len(start_dates)):
             ranges.append((df.columns[0], start_dates[i].to_pydatetime(), end_dates[i].to_pydatetime()))
 
@@ -66,15 +85,15 @@ def gantt_plot(dfs, ax=None, **kwargs):
             start_dates, end_dates = utils.mark_start_end(df)
             for i in range(len(start_dates)):
                 ranges.append((df.columns[0], start_dates[i].to_pydatetime(), end_dates[i].to_pydatetime()))
-
+    # print(ranges)
     ranges = pd.DataFrame(ranges, columns=['id', 'start', 'end']) 
     ranges.set_index('id', inplace=True)   
-
+    # print(ranges.head())
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 
-    ax.xaxis_date()
-    ax.hlines(ranges.index, 
+    ax = ax.xaxis_date()
+    ax = plt.hlines(ranges.index, 
               mdates.date2num(ranges['start']), 
               mdates.date2num(ranges['end']), **kwargs)
     plt.grid(linestyle='-.')
