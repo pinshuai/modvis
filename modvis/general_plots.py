@@ -20,20 +20,68 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 # sys.path.append("..")
 import modvis.utils as utils
 
-def gantt_plot(ranges, **kwargs):
-    """Plot Gantt plot given start and end date.
-    Parameters:
-        ranges, DataFrame
-        Dataframe with index as name/id, two separate columns ['start', 'end']
-    
+def gantt_plot(dfs, ax=None, **kwargs):
     """
-    fig,ax = plt.subplots(1,1, figsize=(8,6))
+    Plot Gantt plot given start and end date.
 
-    ax = ax.xaxis_date()
-    ax = plt.hlines(ranges.index, 
-                    mdates.date2num(ranges['start']), 
-                    mdates.date2num(ranges['end']), **kwargs)
+    Parameters:
+        dfs : DataFrame or list of DataFrames
+            Dataframe(s) with index as name/id and two separate columns ['start', 'end'].
+            If a single DataFrame is provided, it should have a MultiIndex with the first level representing the name/id. Or, the DataFrame should have a single column representing the name/id.
+            If a list of DataFrames is provided, each DataFrame should have a single column representing the name/id.
+
+        ax : matplotlib.axes.Axes, optional
+            The axes on which to plot the Gantt chart. If not provided, a new figure and axes will be created.
+
+        **kwargs : dict, optional
+            Additional keyword arguments to be passed to the `plt.hlines` function.
+
+    Returns:
+        fig : matplotlib.figure.Figure or None
+            The Figure object if `ax` is None, otherwise None.
+
+        ax : matplotlib.axes.Axes or None
+            The Axes object if `ax` is None, otherwise None.
+    """
+    ndf = len(dfs)
+    if ndf == 1 and isinstance(dfs.index, pd.MultiIndex):
+        ranges = []
+        for index in dfs.index.levels[0]:
+            df = dfs.loc[index]
+            df.index = pd.to_datetime(df.index)
+            start_dates, end_dates = utils.mark_start_end(df)
+            for i in range(len(start_dates)):
+                ranges.append((index, start_dates[i].to_pydatetime(), end_dates[i].to_pydatetime()))
+    elif ndf == 1 and isinstance(dfs, pd.DataFrame):
+        ranges = []
+        df = dfs[0]
+        start_dates, end_dates = utils.mark_start_end(df)
+        for i in range(len(start_dates)):
+            ranges.append((df.columns[0], start_dates[i].to_pydatetime(), end_dates[i].to_pydatetime()))
+
+    if ndf > 1 and isinstance(dfs[0], pd.DataFrame):
+        ranges = []
+        for i in range(1, ndf):
+            df = dfs[i]
+            start_dates, end_dates = utils.mark_start_end(df)
+            for i in range(len(start_dates)):
+                ranges.append((df.columns[0], start_dates[i].to_pydatetime(), end_dates[i].to_pydatetime()))
+
+    ranges = pd.DataFrame(ranges, columns=['id', 'start', 'end']) 
+    ranges.set_index('id', inplace=True)   
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+
+    ax.xaxis_date()
+    ax.hlines(ranges.index, 
+              mdates.date2num(ranges['start']), 
+              mdates.date2num(ranges['end']), **kwargs)
+    plt.grid(linestyle='-.')
     fig.tight_layout()  
+
+    if ax is None:
+        return fig, ax
 
 def plot_FDC(dfs, labels, colors, linestyles=None, start_date=None, end_date=None,
              time_index=None, rank_method = 'average', var=None, ax=None, **kwargs):
