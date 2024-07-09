@@ -125,9 +125,7 @@ def plot_water_content(vis_data,
     except:
         return ax, tpc
 
-def plot_column_head(vis_data, 
-                     origin_date='1980-01-01', col_ind = 0, plot = True,
-                     ax=None):
+def plot_column_head(vis_data, origin_date='1980-01-01', col_ind = 0, cell_id = None, infer_col_from_cell = False, plot = True, ax=None):
     """plot variable in a single column over time in the subsurface.
     Parameters:
         vis_data, object from xdmf.VisFile()
@@ -135,6 +133,10 @@ def plot_column_head(vis_data,
             model start origin time. Defaults to 1980-1-1
         col_ind, int
             column index for plotting head
+        cell_id, int
+            cell id in a column. This is used for inferring the column index. The cell id can be obtained by viewing visdump file in Paraview/Visit. This can be useful if col_ind is not known. Defaults to None.
+        infer_col_from_cell, bool
+            infer column index from a given cell id if True. Defaults to False.            
         plot, bool
             plot the head if true
     Returns:
@@ -147,6 +149,11 @@ def plot_column_head(vis_data,
     times = get_time(vis_data, origin_date=origin_date)
     # times = vis_data.times
     # datetime = rmLeapDays(times)
+
+    # obtain column index from given cell id
+    if infer_col_from_cell and cell_id is not None:
+        col_ind = np.where(map == cell_id)[0][0]
+
     dat = vis_data.getArray("pressure")
 
     iz_coord = ordered_centroids[col_ind, :, -1]
