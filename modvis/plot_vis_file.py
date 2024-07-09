@@ -289,7 +289,7 @@ def plot_gw_surface(visfile, origin_date="1980-01-01", time_slice = -1, return_h
         except:
             return ax, tpc
 
-def plot_column_data(vis_data, var_name, origin_date='1980-01-01', col_ind = 0, cmap = None, ylabel = None, plot_contour = False, contour_spacing = 0.01, levels = None, logx = False, ax=None):
+def plot_column_data(vis_data, var_name, origin_date='1980-01-01', col_ind = 0, cell_id = None, infer_col_from_cell = False, cmap = None, ylabel = None, plot_contour = False, contour_spacing = 0.01, levels = None, logx = False, ax=None):
     """plot variable in a single column over time in the subsurface.
 
     Parameters:
@@ -299,7 +299,11 @@ def plot_column_data(vis_data, var_name, origin_date='1980-01-01', col_ind = 0, 
         origin_date, str
             model start origin time. Defaults to 1980-1-1
         col_ind, int
-            column index for plotting head
+            column index for plotting variables such as pressure. Defaults to 0.
+        cell_id, int
+            cell id in a column. This is used for inferring the column index. The cell id can be obtained by viewing visdump file in Paraview/Visit. This can be useful if col_ind is not known. Defaults to None.
+        infer_col_from_cell, bool
+            infer column index from a given cell id if True. Defaults to False.
         cmap, str
             colormap for plotting
         plot_contour, bool
@@ -318,6 +322,10 @@ def plot_column_data(vis_data, var_name, origin_date='1980-01-01', col_ind = 0, 
     ordered_centroids = vis_data.centroids
     map = vis_data.map
 
+    # obtain column index from given cell id
+    if infer_col_from_cell and cell_id is not None:
+        col_ind = np.where(map == cell_id)[0][0]
+    
     # times = vis_data.times
     times = get_time(vis_data, origin_date=origin_date)
     dat = vis_data.getArray(var_name)
