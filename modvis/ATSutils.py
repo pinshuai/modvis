@@ -7,6 +7,7 @@ from math import sqrt
 from sklearn.metrics import mean_squared_error
 from scipy.stats.stats import pearsonr
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import datetime as dt
 from datetime import datetime, timedelta
 import time
@@ -253,8 +254,8 @@ def combine_obs_output(old_dir, new_dir):
     df_old = load_waterBalance(old_dir, cumsum = False)
     df_new = load_waterBalance(new_dir, cumsum = False)
     
-    df_old_sub = df_old.loc[:, 'time [d]':'(Pr+SM-ET-Q) [m/d]']
-    df_new_sub = df_new.loc[:, 'time [d]':'(Pr+SM-ET-Q) [m/d]']
+    df_old_sub = df_old.loc[:, 'time [d]':'(Pr+SM-ET-Q) [m d^-1]']
+    df_new_sub = df_new.loc[:, 'time [d]':'(Pr+SM-ET-Q) [m d^-1]']
     
     assert(df_old_sub.shape[-1] == df_new_sub.shape[-1])
     df = pd.concat([df_old_sub, df_new_sub]) 
@@ -474,14 +475,14 @@ def get_subbasin_value(vis_data, varname, subbasin_cells, volume, times, weighte
     
     data = vis_data.getArray(varname)
     if 'transpiration' in varname or 'precip' in varname or 'snow-melt' in varname:
-        #convert m/s to mm/d
+        #convert m/s to mm d^-1
         data = data*86400*1000 
-        unit = '[mm/d]'
+        unit = '[mm d^-1]'
     elif 'flux' in varname:
         #convert mol/s to m^3/d
         data = data / rho_m *86400 
-        data = data/ volume *1000 # m3/d to mm/d
-        unit = '[mm/d]'
+        data = data/ volume *1000 # m3/d to mm d^-1
+        unit = '[mm d^-1]'
     elif "snow-water_equivalent" in varname:
         # convert m to mm
         data = data*1000 
@@ -542,9 +543,9 @@ def surfaceArea(model_dir):
     
 def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
                       'D', UTC_time = None, resample_freq = None, canopy =
-                      True, origin_date = "1980-01-01", noleap = True, cumsum = True,
+                      True, origin_date = "1980-01-01", noleap = True, 
                       restart_dir = None, out_file = None, plot = False,
-                      catchment_area=None,
+                      catchment_area=None, sep = ',',
                       **kwargs):
     """read ATS output files, new dataframe format
     Parameters:
@@ -564,14 +565,16 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
             Original datetime in Daymet forcing time column
         noleap: bool, default is True
             Assume model ignores the leap year to be consistent with Daymet product
-        cumsum: bool,
-            If true, generate cumsum for vairables
         restart_dir: list or None
             If list, merge with restarted model output
         out_file: str or None
             If string, save water balance in a csv file.
         plot: bool,
             If true, plot water balance plots
+        catchment_area: float or None
+            If float, use this value as catchment area. Otherwise, calculate from model output (requires "*surface_data.h5" file!).
+        sep: str
+            delimiter used in the water balance file. Default is ','
     Returns:
         dataframe of model variables and/or a resampled dataframe.
     
@@ -583,12 +586,12 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
         surface_area = surfaceArea(model_dir)
     assert(surface_area is not None)
 
-    df = load_output(model_dir, WB_filename, timestep, origin_date, noleap=noleap, **kwargs)
-    
+    df = load_output(model_dir, WB_filename, timestep, origin_date, noleap=noleap, sep=sep, **kwargs)
+
     if restart_dir is not None:
         assert(type(restart_dir) is list)
         for idir in restart_dir:
-            df_rst = load_output(idir, WB_filename, timestep, origin_date,
+            df_rst = load_output(idir, WB_filename, timestep, origin_date, noleap=noleap, sep=sep, 
                                  **kwargs)
             if df.shape[-1] != df_rst.shape[-1]:
                 logging.warning("waterbalance.out file columns does not match! Trying merging anyway.")
@@ -606,11 +609,15 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
 
     if "river discharge [mol d^-1]" in df.columns:
         df["river discharge [m^3/d]"] = df['river discharge [mol d^-1]'] / rho_m
-        df["river discharge [m/d]"] = df['river discharge [m^3/d]'] / surface_area
+        df["river discharge [m d^-1]"] = df['river discharge [m^3/d]'] / surface_area
 
     if "net groundwater flux [mol d^-1]" in df.columns:
         df["net groundwater flux [m^3/d]"] = df['net groundwater flux [mol d^-1]'] / rho_m
-        df["net groundwater flux [m/d]"] = df['net groundwater flux [m^3/d]'] / surface_area
+        df["net groundwater flux [m d^-1]"] = df['net groundwater flux [m^3/d]'] / surface_area
+
+    if "net exchange flux [mol d^-1]" in df.columns:
+        df["net exchange flux [m^3/d]"] = df['net exchange flux [mol d^-1]'] / rho_m
+        df["net exchange flux [m d^-1]"] = df['net exchange flux [m^3/d]'] / surface_area
 
     # convert units
     if timestep == 'H':
@@ -632,37 +639,20 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
     df['snow precipitation [mm d^-1]'] = df['snow precipitation [m d^-1]']*1000
     df['snowmelt [mm d^-1]'] = df['snowmelt [m d^-1]']*1000
     df['watershed boundary discharge [m^3/d]'] = df['watershed boundary discharge [mol d^-1]'] / rho_m
-    df['watershed boundary discharge [m/d]'] = df['watershed boundary discharge [m^3/d]'] / surface_area
+    df['watershed boundary discharge [m d^-1]'] = df['watershed boundary discharge [m^3/d]'] / surface_area
     df["total evapotranspiration [mm d^-1]"] = df["total evapotranspiration [m d^-1]"] *1000         
     df['snow water content [m]'] = df['snow water content [mol]'] / rho_m / surface_area
     df['surface water content [m]'] = df['surface water content [mol]'] / rho_m / surface_area
     df['subsurface water content [m]'] = df['subsurface water content [mol]'] / rho_m / surface_area     
-    df['exfiltration [m d^-1]'] = df['exfiltration [mol d^-1]'] / rho_m / surface_area
+    # df['exfiltration [m d^-1]'] = df['exfiltration [mol d^-1]'] / rho_m / surface_area
     if not canopy:            
         df['total water content [m]'] = df['surface water content [m]'] + df['subsurface water content [m]'] + df['snow water content [m]']
     else:
         df["canopy water content [m]"] = df["canopy water content [mol]"]/ rho_m / surface_area
-        # df['canopy interception [m d^-1]'] = np.zeros(len(df)) #DUMMY
-        # df['(Ps_thru-SM-Es) [m/d]'] = df['snow to surface [m SWE d^-1]'] - df['snowmelt [m d^-1]'] -df['snow evaporation [m d^-1]']
-        # df['(CanI-D-Ec) [m/d]'] = df['canopy interception [m d^-1]'] - df['canopy drainage [m d^-1]'] - df['canopy evaporation [m d^-1]']
         df['total water content [m]'] = df['surface water content [m]'] + df['subsurface water content [m]'] + df['snow water content [m]'] + df["canopy water content [m]"]
-      
-    # if "net groundwater flux [mol d^-1]" in df.columns:
-    #     df['(Pr+SM-ET-Q-gw) [m/d]'] = df['rain precipitation [m d^-1]'] + df['snowmelt [m d^-1]'] -\
-    #                         df['total evapotranspiration [m d^-1]'] - df['watershed boundary discharge [m/d]'] -\
-    #                         df['net groundwater flux [m/d]']
-    #     df['(Pr+Ps-ET-Q-gw) [m/d]'] = df['rain precipitation [m d^-1]'] + df['snow precipitation [m d^-1]'] -\
-    #                         df['total evapotranspiration [m d^-1]'] - df['watershed boundary discharge [m/d]'] -\
-    #                         df['net groundwater flux [m/d]']
-    # calculate water balance
-    # df['(Pr+SM-ET-Q) [m/d]'] = df['rain precipitation [m d^-1]'] + df['snowmelt [m d^-1]'] -\
-    #                     df['total evapotranspiration [m d^-1]'] - df['watershed boundary discharge [m/d]']
-    # df['(Pr+Ps-ET-Q) [m/d]'] = df['rain precipitation [m d^-1]'] + df['snow precipitation [m d^-1]'] -\
-    #                     df['total evapotranspiration [m d^-1]'] - df['watershed boundary discharge [m/d]']
-    # df['(Ps-SM) [m/d]'] = df['snow precipitation [m d^-1]'] - df['snowmelt [m d^-1]']
-
+    
     if resample_freq is not None:
-        variables = ['rain precipitation [m d^-1]','snow precipitation [m d^-1]','snowmelt [m d^-1]', 'watershed boundary discharge [m/d]', 'watershed boundary discharge [m^3/d]', 'total evapotranspiration [m d^-1]', 'max ponded depth [m]', 'SWE [m]']
+        variables = ['rain precipitation [m d^-1]','snow precipitation [m d^-1]','snowmelt [m d^-1]', 'watershed boundary discharge [m d^-1]', 'watershed boundary discharge [m^3/d]', 'total evapotranspiration [m d^-1]', 'max ponded depth [m]', 'SWE [m]']
         df_rs = df.loc[:, variables].copy()
         logging.info(f"Resample to {resample_freq} frequency")
         df_rs = df_rs.resample(resample_freq).mean()
@@ -670,44 +660,7 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
         
         if UTC_time is not None:
             df_rs.index = df_rs.index.shift(UTC_time, freq = 'H')     
-    
-    # if cumsum:
-        
-        # if "net groundwater flux [mol d^-1]" in df.columns:
-        #     df["cum_groundwater flux [m]"] = df['net groundwater flux [m/d]'].cumsum()
-        #     df['cum_(Pr+Ps-ET-Q-gw) [m]'] = df['(Pr+Ps-ET-Q-gw) [m/d]'].cumsum()
-        # if canopy:
-        #     # df['cum canopy mass change [m]'] = df["canopy water content [m]"].cumsum()
-        #     df['cum_canopy evaporation [m]'] = df['canopy evaporation [m d^-1]'].cumsum()
-        #     df['cum_canopy drainage [m]'] = df['canopy drainage [m d^-1]'].cumsum()
-        #     df['cum_canopy interception [m]'] = df['canopy interception [m d^-1]'].cumsum()
-        #     df['cum_snow evaporation [m]'] = df['snow evaporation [m d^-1]'].cumsum()
-        #     df["cum_snow to surface [m]"] = df['snow to surface [m SWE d^-1]'].cumsum()
-        #     df['cum_(CanI-D-Ec) [m]'] = df['(CanI-D-Ec) [m/d]'].cumsum()
-        #     df['cum_(Ps_thru-SM-Es) [m]'] = df['(Ps_thru-SM-Es) [m/d]'].cumsum()
-        #     df['cum_(P-Pt+S-St-Ec-drainage) [m]'] = (df['rain precipitation [m d^-1]'] - df["water to surface [m d^-1]"] + df["snow precipitation [m d^-1]"] - df["snow to surface [m SWE d^-1]"] - df["canopy evaporation [m d^-1]"] - df["canopy drainage [m d^-1]"]).cumsum()
-        # df["cum_rain precipitation [m]"] = df['rain precipitation [m d^-1]'].cumsum()
-        # df["cum_snow precipitation [m]"] = df['snow precipitation [m d^-1]'].cumsum()
-        # df["cum_snowmelt [m]"] = df['snowmelt [m d^-1]'].cumsum()
-        # df["cum_ET [m]"] = df["total evapotranspiration [m d^-1]"].cumsum()
-        # df['cum_overland flux [m]'] = df['watershed boundary discharge [m/d]'].cumsum()
-        # df['cum_(Pr+SM-ET-Q) [m]'] = df['(Pr+SM-ET-Q) [m/d]'].cumsum()
-        # df['cum_(Pr+Ps-ET-Q) [m]'] = df['(Pr+Ps-ET-Q) [m/d]'].cumsum()
-        # df['cum_(Ps-SM) [m]'] = df["(Ps-SM) [m/d]"].cumsum()
-        # df['cum canopy mass change [m]'] = df['canopy water content [m]'] - df['canopy water content [m]'].values[0]
-        # df['cum snow mass change [m]'] = df['snow water content [m]'] - df['snow water content [m]'].values[0]
-        # df['cum water mass change [m]'] = df['total water content [m]'] - df['total water content [m]'].values[0]
-
-        # if "net groundwater flux [mol d^-1]" in df.columns:
-        #     df['water mass error [m]'] = df['cum_(Pr+Ps-ET-Q-gw) [m]'] - df['cum water mass change [m]']
-        # else:
-        #     df['water mass error [m]'] = df['cum_(Pr+Ps-ET-Q) [m]'] - df['cum water mass change [m]']
-
-        # if not canopy:
-        #     df['snow mass error [m]'] = df['cum_(Ps-SM) [m]'] - df['cum snow mass change [m]']
-        # else:
-        #     df['snow mass error [m]'] = df['cum_(Ps_thru-SM-Es) [m]'] - df['cum snow mass change [m]']
-            
+                
     if plot:
         # plot water balance
         if canopy:
@@ -716,7 +669,9 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
             domain_names = ['global', 'snow', 'surface', 'subsurface']
 
         def cumu_plot(domain, df, ax):
-            """Plot cumulative fluxes
+            """Plot cumulative fluxes to check water balance at each domain. 
+            The steps follow Ethan's notebook here: https://github.com/amanzi/ats-demos/blob/master/05_ecohydrology/water_balance_pt_canopy.ipynb
+
             Parameters:
             -----------
                 domain: str
@@ -727,11 +682,15 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
                     axes to plot on
 
             Water balances:
-                global: dWC/dt = Pr + Ps - ET - Q or dWC/dt = Pr + Ps - ET - Q - Gw (Pr: rain precipitation, Ps: snow precipitation, ET: evapotranspiration, Q: overland flow, Gw: groundwater flux)
-                canopy: dWC/dt = I - D - Ec (I: canopy interception, D: drainage, Ec: canopy evaporation)
-                snow: dWC/dt = S_thru+D - SM - Es (S_thru: snow throughfall, D: drainage, SM: snowmelt, Es: sublimation or snow evaporation)
-                surface: dWC/dt = R_thru+D - SM - E - Q - Inf (R_thru: rain throughfall, D: drainage, SM: snowmelt, E: surface evaporation, Q: overland flow, Inf: infiltration)
-                subsurface: dWC/dt = Inf - T or I - T - Gw (Inf: infiltration, T: transpiration, Gw: groundwater flux))   
+                - global: dWC/dt = Pr + Ps - ET - Q or dWC/dt = Pr + Ps - ET - Q - Gw (Pr: rain precipitation, Ps: snow precipitation, ET: evapotranspiration, Q: overland flow, Gw: net_groundwater_flux)
+                - canopy: dWC/dt = I - D - Ec (I: canopy interception, D: drainage, Ec: canopy evaporation)
+                - snow: dWC/dt = S_thru+D - SM - Es (S_thru: snow throughfall, D: drainage, SM: snowmelt, Es: sublimation or snow evaporation)
+                - surface: dWC/dt = R_thru+D - SM - E - Q - Inf (R_thru: rain throughfall, D: drainage, SM: snowmelt, E: surface evaporation, Q: overland flow, Inf: net_infiltration or net_exchange)
+                - subsurface: dWC/dt = Inf - T or I - T - Gw (Inf: net_infiltration or net_exchange, T: transpiration, Gw: net_groundwater_flux))  
+
+            Variables: 
+                - Gw or net_groundwater_flux: the amount of water entering or leaving the subsurface domain though the external_sides boundary. Typically, this would be zero if the subsurface domain is closed. i.e., no flow boundary conditions at bottom and sides. However, if subwatershed is included and there is flow exchange between subwatersheds, then this value will be non-zero.
+                - Inf or net_infiltration/net_exchange: the net exchange amount of water entering or leaving the surface domain. Positive [+] values indicate water entering the surface domain or leaving the subsurface domain. Negative [-] values indicate water leaving the surface domain or entering the subsurface domain.
             """
             time = df.index
             fluxes = {}
@@ -739,9 +698,9 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
                 fluxes['Pr'] = df['rain precipitation [m d^-1]']
                 fluxes['Ps'] = df['snow precipitation [m d^-1]']
                 fluxes['ET'] = df['total evapotranspiration [m d^-1]']
-                fluxes['Q'] = df['watershed boundary discharge [m/d]']
+                fluxes['Q'] = df['watershed boundary discharge [m d^-1]']
                 if "net groundwater flux [mol d^-1]" in df.columns:
-                    fluxes['Gw'] = df['net groundwater flux [m/d]']
+                    fluxes['Gw'] = df['net groundwater flux [m d^-1]']
                     net_fluxes = fluxes['Pr'] + fluxes['Ps'] - fluxes['ET'] - fluxes['Q'] - fluxes['Gw']
                 else:
                     net_fluxes = fluxes['Pr'] + fluxes['Ps'] - fluxes['ET'] - fluxes['Q']
@@ -765,16 +724,16 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
                 fluxes['R_thru+D'] = df['water to surface [m d^-1]']
                 fluxes['SM'] = df['snowmelt [m d^-1]']
                 fluxes['E'] = df['surface evaporation [m d^-1]']
-                fluxes['Q'] = df['watershed boundary discharge [m/d]']
-                fluxes['Inf'] = -df['exfiltration [m d^-1]']
+                fluxes['Q'] = df['watershed boundary discharge [m d^-1]']
+                fluxes['Inf'] = -df['net exchange flux [m d^-1]']
                 net_fluxes = fluxes['R_thru+D'] + fluxes['SM'] - fluxes['E'] - fluxes['Q'] - fluxes['Inf']
                 water_content_change = df['surface water content [m]'] - df['surface water content [m]'].values[0]
 
             if domain == 'subsurface':
-                fluxes['Inf'] = -df['exfiltration [m d^-1]']
+                fluxes['Inf'] = -df['net exchange flux [m d^-1]']
                 fluxes['T'] = df['transpiration [m d^-1]']
                 if "net groundwater flux [mol d^-1]" in df.columns:
-                    fluxes['Gw'] = df['net groundwater flux [m/d]']
+                    fluxes['Gw'] = df['net groundwater flux [m d^-1]']
                     net_fluxes = fluxes['Inf'] - fluxes['T'] - fluxes['Gw']
                 else:
                     net_fluxes = fluxes['Inf'] - fluxes['T']
@@ -794,12 +753,15 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
             
             ax.set_xlim(df.index[0], df.index[-1])
             ax.set_xlabel('')
-            ax.legend(loc='upper left', fontsize = 10, bbox_to_anchor = (1.0,1.15), frameon = False)
-            if domain != "subsurface":
-                ax.xaxis.set_ticklabels([])
+            ax.legend(loc='upper left', fontsize = 10, bbox_to_anchor = (1.0,1.0), frameon = False)
+            ax.minorticks_off()
+            ax.xaxis.set_major_locator(mdates.YearLocator())
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+            # if domain != "subsurface":
+            #     ax.xaxis.set_ticklabels([])
 
 
-        fig, axes = plt.subplots(len(domain_names) + 1, 1, figsize=(8, 2.5*len(domain_names)), sharex=True)
+        fig, axes = plt.subplots(len(domain_names) + 1, 1, figsize=(8, 3*len(domain_names)), sharex=True, dpi=150)
  
         # plot incoming and outgoing fluxes
         ax = axes[0]
@@ -809,14 +771,14 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
         ax1 = ax.twinx()
         if "river discharge [mol d^-1]" in df.columns:
             df.plot(y=["total evapotranspiration [m d^-1]", 
-                   "river discharge [m/d]"], color =
+                   "river discharge [m d^-1]"], color =
                 colors[2:4], ax = ax1)
         else:
             df.plot(y=["total evapotranspiration [m d^-1]", 
-                   "watershed boundary discharge [m/d]"], color =
+                   "watershed boundary discharge [m d^-1]"], color =
                 colors[2:4], ax = ax1)
-        ax.set_ylabel('Incoming flux [m/d]')
-        ax1.set_ylabel('Outgoing flux [m/d]')
+        ax.set_ylabel('Incoming flux [m d^-1]')
+        ax1.set_ylabel('Outgoing flux [m d^-1]')
         ax.legend(loc='upper left', fontsize = 10, bbox_to_anchor = (0.0,1.3), frameon = False)
         ax1.legend(loc='upper left', fontsize = 10, bbox_to_anchor = (0.5,1.3),
                   frameon = False)
@@ -829,52 +791,7 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
         for i, domain in enumerate(domain_names):
             ax = axes[i + 1]
             cumu_plot(domain, df, ax)
-
-#         if "net groundwater flux [mol d^-1]" in df.columns:
-#             df.plot(y=["cum_rain precipitation [m]", "cum_snow precipitation [m]", "cum_ET [m]", 
-#                    "cum_overland flux [m]", "cum_groundwater flux [m]", 'cum_(Pr+Ps-ET-Q-gw) [m]'], ax = ax)
-#         else:
-#             df.plot(y=["cum_rain precipitation [m]", "cum_snow precipitation [m]", "cum_ET [m]", 
-#                    "cum_overland flux [m]", 'cum_(Pr+Ps-ET-Q) [m]'], ax = ax)
-#         df.plot(y = ['cum water mass change [m]', 'water mass error [m]'], style = ['-.','-'], color = ['k', 'grey'], ax = ax)
-#         ax.set_ylabel('CumFlux [m]')
-#         ax.legend(loc='upper left', fontsize = 10, bbox_to_anchor = (1.0,1.15), frameon = False)
-#         max_error = max(abs(df['water mass error [m]'].max()), abs(df['water mass error [m]'].min()))
-# #         print(max_error)
-#         ax.set_title(f'Total water balance (max error = {max_error*1000:.2f} mm)')
-#         ax.xaxis.set_ticklabels([])
-#         ax.set_xlim(df.index[0], df.index[-1])
-#         ax.set_xlabel('')
-
-        # plot canopy water balance
-        # dWC_canopy/dt = canopy_interception + canopy_drainage - canopy_evaporation
-        # ax = axes[2]
-        # if not canopy:
-        #     df.plot()
-        # else:
-        #     df.plot(y=[ "cum_canopy interception [m]", "cum_canopy drainage [m]", 'cum_canopy evaporation [m]', 'cum_(CanI) [m]'], ax=ax)
-        #     df.plot(y=['cum snow mass change [m]', 'snow mass error [m]'], style = ['-.','-'], color = ['k', 'grey'], ax = ax)
-        # ax.set_ylabel('CumFlux [m]')
-        # ax.legend(loc='upper left', fontsize = 10, bbox_to_anchor = (1.0,1.1), frameon = False)
-        # max_error = max(abs(df['snow mass error [m]'].max()), abs(df['snow mass error [m]'].min()))
-        # ax.set_title(f'Snow water balance (max error = {max_error*1000:.2f} mm'))
-        # ax.set_xlim(df.index[0], df.index[-1])  
-        # ax.set_xlabel('')
-
-        # # plot snow water balance
-        # ax = axes[3]
-        # if not canopy:
-        #     df.plot(y=["cum_snow precipitation [m]", "cum_snowmelt [m]", 'cum_(Ps-SM) [m]'], ax = ax)
-        #     df.plot(y=['cum snow mass change [m]', 'snow mass error [m]'], style = ['-.','-'], color = ['k', 'grey'], ax = ax)
-        # else:
-        #     df.plot(y=[ "cum_snow to surface [m]", "cum_snowmelt [m]", 'cum_snow evaporation [m]', 'cum_(Ps_thru-SM-Es) [m]'], ax=ax)
-        #     df.plot(y=['cum snow mass change [m]', 'snow mass error [m]'], style = ['-.','-'], color = ['k', 'grey'], ax = ax)
-        # ax.set_ylabel('CumFlux [m]')
-        # ax.legend(loc='upper left', fontsize = 10, bbox_to_anchor = (1.0,1.1), frameon = False)
-        # max_error = max(abs(df['snow mass error [m]'].max()), abs(df['snow mass error [m]'].min()))
-        # ax.set_title(f'Snow water balance (max error = {max_error*1000:.2f} mm'))
-        # ax.set_xlim(df.index[0], df.index[-1])  
-        # ax.set_xlabel('')
+        fig.tight_layout()
     
     if UTC_time is not None:
         df.index = df.index.shift(UTC_time, freq = 'H')         
@@ -888,7 +805,7 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
         return df
 
 def load_output(model_dir, WB_filename, timestep = 'D', origin_date =
-                '1980-01-01', noleap=True, **kwargs):
+                '1980-01-01', noleap=True, sep = ',', **kwargs):
     """read ATS output files
     Parameters:
         model_dir: str
@@ -901,11 +818,19 @@ def load_output(model_dir, WB_filename, timestep = 'D', origin_date =
             origin of model time
         noleap: bool
             remove leap days or not. Default is True.
+        sep: str
+            delimiter used in the observation file. Default is ','
+        kwargs: dict
+            additional arguments passed to rmLeapDays()
     Returns:
         datetime, data, and dataframe(datetime, data)
     
     """
-    df = pd.read_csv(os.path.join(model_dir, WB_filename), sep='\s+',  comment='#')
+    df = pd.read_csv(os.path.join(model_dir, WB_filename), sep=sep,  comment='#')
+    # Assert that the DataFrame is not empty
+    assert not df.empty, "The DataFrame is empty. Double check the path to the water balance file."
+    assert 'time [d]' in df.columns or 'time [h]' in df.columns, "The DataFrame does not have either 'time [d]' or 'time [s]' column. Double check the df and water balance file. Did you use the correct separator in pd.read_csv()? Defaults to comma."
+
     if timestep == 'D':
         # get datetime, convert seconds to days
         datetime_ats = rmLeapDays(df['time [d]'], freq='D', origin_date =
