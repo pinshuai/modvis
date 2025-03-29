@@ -63,7 +63,7 @@ def add_land_cover(main_list, nlcd_labels):
     #
     # Rooting depth curves from CLM TN 4.5 table 8.3
     #
-    # Note, the mafic potential values are likely pretty bad for the types of van Genuchten 
+    # Note, the capillary pressure values are likely pretty bad for the types of van Genuchten 
     # curves we are using (ETC -- add paper citation about this topic).  Likely they need
     # to be modified.  Note that these values are in [mm] from CLM TN 4.5 table 8.1, so the 
     # factor of 10 converts to [Pa]
@@ -78,20 +78,20 @@ def add_land_cover(main_list, nlcd_labels):
             land_cover_list[ilc]['rooting profile alpha [-]'] = 7.0
             land_cover_list[ilc]['rooting profile beta [-]'] = 2.0
             land_cover_list[ilc]['rooting depth max [m]'] = 2.0
-            land_cover_list[ilc]['mafic potential at fully closed stomata [Pa]'] = 2500785
-            land_cover_list[ilc]['mafic potential at fully open stomata [Pa]'] = 647262  
+            land_cover_list[ilc]['capillary pressure at fully closed stomata [Pa]'] = 2500785
+            land_cover_list[ilc]['capillary pressure at fully open stomata [Pa]'] = 647262  
         elif name_has_string(new_ilc, ["deciduous", "savannas", "mix"]):
             land_cover_list[ilc]['rooting profile alpha [-]'] = 6.0
             land_cover_list[ilc]['rooting profile beta [-]'] = 2.0
             land_cover_list[ilc]['rooting depth max [m]'] = 2.0
-            land_cover_list[ilc]['mafic potential at fully closed stomata [Pa]'] = 2196768
-            land_cover_list[ilc]['mafic potential at fully open stomata [Pa]'] = 343245
+            land_cover_list[ilc]['capillary pressure at fully closed stomata [Pa]'] = 2196768
+            land_cover_list[ilc]['capillary pressure at fully open stomata [Pa]'] = 343245
         elif name_has_string(new_ilc, ["shrub", "grassland"]):
             land_cover_list[ilc]['rooting profile alpha [-]'] = 7.0
             land_cover_list[ilc]['rooting profile beta [-]'] = 1.5
             land_cover_list[ilc]['rooting depth max [m]'] = 0.5
-            land_cover_list[ilc]['mafic potential at fully closed stomata [Pa]'] = 4197396
-            land_cover_list[ilc]['mafic potential at fully open stomata [Pa]'] = 813981
+            land_cover_list[ilc]['capillary pressure at fully closed stomata [Pa]'] = 4197396
+            land_cover_list[ilc]['capillary pressure at fully open stomata [Pa]'] = 813981
         else:
             logging.info(f"Default values are used for {ilc}!")
 
