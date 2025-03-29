@@ -80,18 +80,21 @@ def add_land_cover(main_list, nlcd_labels):
             land_cover_list[ilc]['rooting depth max [m]'] = 2.0
             land_cover_list[ilc]['capillary pressure at fully closed stomata [Pa]'] = 2500785
             land_cover_list[ilc]['capillary pressure at fully open stomata [Pa]'] = 647262  
+            land_cover_list[ilc]['Priestley-Taylor alpha of bare ground [-]'] = 1.0
         elif name_has_string(new_ilc, ["deciduous", "savannas", "mix"]):
             land_cover_list[ilc]['rooting profile alpha [-]'] = 6.0
             land_cover_list[ilc]['rooting profile beta [-]'] = 2.0
             land_cover_list[ilc]['rooting depth max [m]'] = 2.0
             land_cover_list[ilc]['capillary pressure at fully closed stomata [Pa]'] = 2196768
             land_cover_list[ilc]['capillary pressure at fully open stomata [Pa]'] = 343245
+            land_cover_list[ilc]['Priestley-Taylor alpha of bare ground [-]'] = 1.0
         elif name_has_string(new_ilc, ["shrub", "grassland"]):
             land_cover_list[ilc]['rooting profile alpha [-]'] = 7.0
             land_cover_list[ilc]['rooting profile beta [-]'] = 1.5
             land_cover_list[ilc]['rooting depth max [m]'] = 0.5
             land_cover_list[ilc]['capillary pressure at fully closed stomata [Pa]'] = 4197396
             land_cover_list[ilc]['capillary pressure at fully open stomata [Pa]'] = 813981
+            land_cover_list[ilc]['Priestley-Taylor alpha of bare ground [-]'] = 1.0
         else:
             logging.info(f"Default values are used for {ilc}!")
 
