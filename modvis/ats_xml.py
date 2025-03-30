@@ -266,7 +266,8 @@ def create_unique_name(name, homogeneous_wrm=False, homogeneous_poro=False, homo
         suffix = ''
     return name + suffix
         
-def write_spinup_steadystate(config, main_list, mean_precip=1e-8, **kwargs):
+def write_spinup_steadystate(config, main_list, mean_precip=1e-8, 
+                             subsurface_props = {},  nlcd_labels= {}, labeled_sets = {}, side_sets = {}, subcatchment_labels=None, **kwargs):
     """ Write the spinup steadystate xml file.
     
     Parameters:
@@ -277,12 +278,12 @@ def write_spinup_steadystate(config, main_list, mean_precip=1e-8, **kwargs):
         mean_precip: float,
             Mean annual precipitation. Default is 1e-8 m/s
     """
-    # # create the main list
-    # main = get_main(config, subsurface_props, nlcd_labels,
-    #                          labeled_sets = ls, side_sets = ss,
-    #                          subcatchment_labels=subcatchment_labels,
-    #                         )
-    main=main_list
+    # create the main list
+    main = get_main(config, subsurface_props=subsurface_props, nlcd_labels = nlcd_labels,
+                             labeled_sets = labeled_sets, side_sets = side_sets,
+                             subcatchment_labels=subcatchment_labels,
+                            )
+    # main=main_list
 
     # set precip to 0.6 * the mean precip value
     precip = main['state']['evaluators'].append_empty('surface-precipitation')
@@ -319,7 +320,9 @@ def write_spinup_steadystate(config, main_list, mean_precip=1e-8, **kwargs):
     # except FileExistsError:
     #     pass
 
-def write_transient(config, main_list, start_date, end_date, nlcd_labels, cyclic_steadystate=False,
+def write_transient(config, main_list, start_date, end_date, subsurface_props = {},  
+                    nlcd_labels= {}, labeled_sets = {}, side_sets = {}, subcatchment_labels=None, 
+                    cyclic_steadystate=False,
                     time0 = "1980-1-1", **kwargs):
     """Write transient xml file using template. 
     
@@ -360,8 +363,11 @@ def write_transient(config, main_list, start_date, end_date, nlcd_labels, cyclic
     logging.info(f'Writing {prefix} xml: {filename}')
     # template_filename = template_dir + f'{prefix}-template.xml'
     
-    # main = get_main()
-    main=main_list
+    main = get_main(config, subsurface_props=subsurface_props, nlcd_labels = nlcd_labels,
+                             labeled_sets = labeled_sets, side_sets = side_sets,
+                             subcatchment_labels=subcatchment_labels,
+                            )
+    # main=main_list
 
     # update the DayMet filenames
     # wind speed uses default?
