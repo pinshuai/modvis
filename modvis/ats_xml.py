@@ -293,7 +293,7 @@ def write_spinup_steadystate(config, main_list, mean_precip=1e-8,
     # name = create_unique_name(name, **kwargs)
     template_file = config['spinup_steadystate_template']
     filename = config[f'spinup_steadystate_xml']
-    logging.info(f'Writing spinup steadystate: {filename}')
+    logging.info(f'Writing spinup steadystate xml: {filename}')
     
     # load the template file
     template_xml = aio.fromFile(template_file)
@@ -387,7 +387,7 @@ def write_transient(config, main_list, start_date, end_date, subsurface_props = 
     #     par.setValue(os.path.join(LAI_filename))
 
     # add the DayMet evaluators
-    ats_input_spec.public.add_daymet_box_evaluators(main, os.path.join('..', daymet_filename), True)
+    ats_input_spec.public.add_daymet_box_evaluators(main, daymet_filename, True)
 
     # for var in ['surface-incoming_shortwave_radiation',
     #             'surface-precipitation_rain',
@@ -445,9 +445,11 @@ def write_transient(config, main_list, start_date, end_date, subsurface_props = 
 
     rundir = config[f'{prefix}_rundir']
     os.makedirs(rundir, exist_ok=True)
+
+
     # try:
     #     os.mkdir(os.path.join('..', '..', 'model', config[f'{prefix}_rundir']))
     # except FileExistsError:
     #     pass
 
-
+    logging.info(f'Done!')
