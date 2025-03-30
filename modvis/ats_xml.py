@@ -319,6 +319,7 @@ def write_spinup_steadystate(config, main_list, mean_precip=1e-8,
     #     os.mkdir(os.path.join('..', '..', 'model', config[f'spinup_steadystate_rundir']))
     # except FileExistsError:
     #     pass
+    logging.info(f'Done!')
 
 def write_transient(config, main_list, start_date, end_date, subsurface_props = {},  
                     nlcd_labels= {}, labeled_sets = {}, side_sets = {}, subcatchment_labels=None, 
@@ -443,9 +444,9 @@ def write_transient(config, main_list, start_date, end_date, subsurface_props = 
     filename = config[f'{prefix}_xml']
     aio.toFile(template_xml, filename)
 
-    rundir = config[f'{prefix}_rundir']
+    rundir = os.path.join('..', '..', 'model', config[f'{prefix}_rundir'])
     os.makedirs(rundir, exist_ok=True)
-
+    logging.info(f"Directory '{rundir}' created successfully.")
 
     # try:
     #     os.mkdir(os.path.join('..', '..', 'model', config[f'{prefix}_rundir']))
