@@ -266,7 +266,7 @@ def create_unique_name(name, homogeneous_wrm=False, homogeneous_poro=False, homo
         suffix = ''
     return name + suffix
         
-def write_spinup_steadystate(config, main_list, mean_precip=1e-8, 
+def write_spinup_steadystate(config, mean_precip=1e-8, 
                              subsurface_props = {},  nlcd_labels= {}, labeled_sets = {}, side_sets = {}, subcatchment_labels=None, **kwargs):
     """ Write the spinup steadystate xml file.
     
@@ -314,14 +314,11 @@ def write_spinup_steadystate(config, main_list, mean_precip=1e-8,
     # make a run directory
     rundir = os.path.join('..', '..', 'model', config[f'spinup_steadystate_rundir'])
     os.makedirs(rundir, exist_ok=True)
+    logging.info(f"Directory '{rundir}' created successfully.")
 
-    # try:
-    #     os.mkdir(os.path.join('..', '..', 'model', config[f'spinup_steadystate_rundir']))
-    # except FileExistsError:
-    #     pass
-    logging.info(f'Done!')
+    # logging.info(f'Done!')
 
-def write_transient(config, main_list, start_date, end_date, subsurface_props = {},  
+def write_transient(config, start_date, end_date, subsurface_props = {},  
                     nlcd_labels= {}, labeled_sets = {}, side_sets = {}, subcatchment_labels=None, 
                     cyclic_steadystate=False,
                     time0 = "1980-1-1", **kwargs):
@@ -448,9 +445,4 @@ def write_transient(config, main_list, start_date, end_date, subsurface_props = 
     os.makedirs(rundir, exist_ok=True)
     logging.info(f"Directory '{rundir}' created successfully.")
 
-    # try:
-    #     os.mkdir(os.path.join('..', '..', 'model', config[f'{prefix}_rundir']))
-    # except FileExistsError:
-    #     pass
-
-    logging.info(f'Done!')
+    # logging.info(f'Done!')
