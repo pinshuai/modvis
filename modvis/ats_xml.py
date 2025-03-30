@@ -15,7 +15,7 @@ import amanzi_xml.utils.io as aio
 import amanzi_xml.utils.search as asearch
 import amanzi_xml.utils.errors as aerrors
 
-def add_domains(main_list, mesh_filename, surface_region='surface', has_canopy=True):
+def add_domains(main_list, mesh_filename, surface_region='surface', snow=True, canopy=True):
     """add the subsurface and surface domains. Note this also adds 
     a 'computational domain' region to the region list, and a vis spec for domain."""
     # add subsurface domain
@@ -36,12 +36,13 @@ def add_domains(main_list, mesh_filename, surface_region='surface', has_canopy=T
                             mesh_type='surface',
                             mesh_args={'surface sideset name':'surface'})
     # add snow domain
-    ats_input_spec.public.add_domain(main_list,
+    if snow:
+        ats_input_spec.public.add_domain(main_list,
                             domain_name='snow',
                             dimension=2,
                             mesh_type='aliased',
                             mesh_args={'target':'surface'})
-    if has_canopy:
+    if canopy:
         # add canopy domain
         ats_input_spec.public.add_domain(main_list,
                             domain_name='canopy',
@@ -121,8 +122,7 @@ def get_main(config, subsurface_props, nlcd_labels, labeled_sets={}, side_sets={
     main_list = ats_input_spec.public.get_main()
     
     # get PKs
-    flow_pk = ats_input_spec.public.add_leaf_pk(main_list, 'flow', main_list['cycle driver']['PK tree'], 
-                                            'richards-spec')
+    # flow_pk = ats_input_spec.public.add_leaf_pk(main_list, 'flow', main_list['cycle driver']['PK tree'], 'richards-spec')
 
     # add the mesh and all domains
     # mesh_filename = os.path.join('..', config['mesh_filename'])
@@ -143,8 +143,8 @@ def get_main(config, subsurface_props, nlcd_labels, labeled_sets={}, side_sets={
     # add land cover
     add_land_cover(main_list, nlcd_labels)
 
-    # add LAIs
-    ats_input_spec.public.add_lai_evaluators(main_list, config['LAI_filename'], nlcd_labels)
+    # # add LAIs
+    # ats_input_spec.public.add_lai_evaluators(main_list, config['LAI_filename'], nlcd_labels)
     
     # add soil material ID regions, porosity, permeability, and WRMs
     for ats_id in subsurface_props.index:
@@ -168,8 +168,7 @@ def get_main(config, subsurface_props, nlcd_labels, labeled_sets={}, side_sets={
     # add observations for each subcatchment for transient runs
     # this will add default observed variables instead of getting those from template
     
-    obs = ats_input_spec.public.add_observations_water_balance(main_list, region="computational domain", 
-                                                               surface_region= "surface domain")
+    obs = ats_input_spec.public.add_observations_water_balance(main_list, region="computational domain", surface_region= "surface domain", boundary_region="external_sides")
     
     if subcatchment_labels is not None:
         for region in subcatchment_labels:
@@ -180,48 +179,80 @@ def get_main(config, subsurface_props, nlcd_labels, labeled_sets={}, side_sets={
 def populate_basic_properties(template_xml, main_xml, homogeneous_wrm=False, homogeneous_poro=False, homogeneous_perm=False):
     """This function updates an xml object with the above properties for mesh, regions, soil props, and lc props"""
     # find and replace the mesh list
-    mesh_i = next(i for (i,el) in enumerate(template_xml) if el.get('name') == 'mesh')
-    template_xml[mesh_i] = asearch.child_by_name(main_xml, 'mesh')
+    # mesh_i = next(i for (i,el) in enumerate(template_xml) if el.get('name') == 'mesh')
+    # template_xml[mesh_i] = asearch.child_by_name(main_xml, 'mesh')
 
-    # find and replace the regions list
-    region_i = next(i for (i,el) in enumerate(template_xml) if el.get('name') == 'regions')
-    template_xml[region_i] = asearch.child_by_name(main_xml, 'regions')
-    
+     # find and replace the mesh list
+    template_xml.replace('mesh', asearch.child_by_name(main_xml, 'mesh'))   
+
+    # # find and replace the regions list
+    # region_i = next(i for (i,el) in enumerate(template_xml) if el.get('name') == 'regions')
+    # template_xml[region_i] = asearch.child_by_name(main_xml, 'regions')
+
+     # find and replace the regions list
+    template_xml.replace('regions', asearch.child_by_name(main_xml, 'regions'))
+
+     # update all model parameters lists. This includes WRM parameters
+    if not homogeneous_wrm:
+        xml_parlist = asearch.find_path(template_xml, ['state', 'model parameters'], no_skip=True)
+        for parlist in asearch.find_path(main_xml, ['state', 'model parameters'], no_skip=True):
+            try:
+                xml_parlist.replace(parlist.getName(), parlist)
+            except aerrors.MissingXMLError:
+                xml_parlist.append(parlist)   
+
     # find and replace land cover
     consts_list = asearch.find_path(template_xml, ['state', 'initial conditions'])
+    lc_list = asearch.find_path(main_xml, ['state', 'initial conditions', 'land cover types'], no_skip=True)
+
     try:
-        lc_i = next(i for (i,el) in enumerate(consts_list) if el.get('name') == 'land cover types')
-    except StopIteration:
-        pass
-    else:
-        consts_list[lc_i] = asearch.find_path(main_xml, ['state', 'initial conditions', 'land cover types'])
+        consts_list.replace('land cover types', lc_list)
+    except aerrors.MissingXMLError:
+        consts_list.append(lc_list)
+
+    # # find and replace land cover
+    # consts_list = asearch.find_path(template_xml, ['state', 'initial conditions'])
+    # try:
+    #     lc_i = next(i for (i,el) in enumerate(consts_list) if el.get('name') == 'land cover types')
+    # except StopIteration:
+    #     pass
+    # else:
+    #     consts_list[lc_i] = asearch.find_path(main_xml, ['state', 'initial conditions', 'land cover types'])
         
     # find and replace the WRMs list -- note here we only replace the inner "WRM parameters" because the
     # demo has this in the PK, not in the evaluators list
-    if not homogeneous_wrm:
-        wrm_list = asearch.find_path(template_xml, ['PKs', 'water retention evaluator'])
-        wrm_i = next(i for (i,el) in enumerate(wrm_list) if el.get('name') == 'WRM parameters')
-        wrm_list[wrm_i] = asearch.find_path(main_xml, ['PKs','water retention evaluator','WRM parameters'])
+    # if not homogeneous_wrm:
+    #     wrm_list = asearch.find_path(template_xml, ['PKs', 'water retention evaluator'])
+    #     wrm_i = next(i for (i,el) in enumerate(wrm_list) if el.get('name') == 'WRM parameters')
+    #     wrm_list[wrm_i] = asearch.find_path(main_xml, ['PKs','water retention evaluator','WRM parameters'])
 
-    fe_list = asearch.find_path(template_xml, ['state', 'evaluators'])
+    # fe_list = asearch.find_path(template_xml, ['state', 'evaluators'])
+
+    # update all evaluator lists
+    xml_elist = asearch.find_path(template_xml, ['state', 'evaluators'], no_skip=True)
+    for elist in asearch.find_path(main_xml, ['state', 'evaluators'], no_skip=True):
+        try:
+            xml_elist.replace(elist.getName(), elist)
+        except aerrors.MissingXMLError:
+            xml_elist.append(elist)  
 
     # update LAIs in the template
     # consts_list = asearch.find_path(template_xml, ['state', 'initial conditions'])
-    try:
-        lc_i = next(i for (i,el) in enumerate(fe_list) if el.get('name') == 'canopy-leaf_area_index')
-    except StopIteration:
-        pass
-    else:    
-        fe_list[lc_i] = asearch.find_path(main_xml, ['state', 'evaluators', 'canopy-leaf_area_index'])    
+    # try:
+    #     lc_i = next(i for (i,el) in enumerate(fe_list) if el.get('name') == 'canopy-leaf_area_index')
+    # except StopIteration:
+    #     pass
+    # else:    
+    #     fe_list[lc_i] = asearch.find_path(main_xml, ['state', 'evaluators', 'canopy-leaf_area_index'])    
     
-    # find and replace porosity, permeability
-    if not homogeneous_poro:
-        poro_i = next(i for (i,el) in enumerate(fe_list) if el.get('name') == 'base_porosity')
-        fe_list[poro_i] = asearch.find_path(main_xml, ['state', 'evaluators', 'base_porosity'])
+    # # find and replace porosity, permeability
+    # if not homogeneous_poro:
+    #     poro_i = next(i for (i,el) in enumerate(fe_list) if el.get('name') == 'base_porosity')
+    #     fe_list[poro_i] = asearch.find_path(main_xml, ['state', 'evaluators', 'base_porosity'])
 
-    if not homogeneous_perm:
-        perm_i = next(i for (i,el) in enumerate(fe_list) if el.get('name') == 'permeability')
-        fe_list[perm_i] = asearch.find_path(main_xml, ['state', 'evaluators', 'permeability'])
+    # if not homogeneous_perm:
+    #     perm_i = next(i for (i,el) in enumerate(fe_list) if el.get('name') == 'permeability')
+    #     fe_list[perm_i] = asearch.find_path(main_xml, ['state', 'evaluators', 'permeability'])
 
 def create_unique_name(name, homogeneous_wrm=False, homogeneous_poro=False, homogeneous_perm=False):
     suffix = '_h'
@@ -246,6 +277,14 @@ def write_spinup_steadystate(config, main_xml, mean_precip=1e-8, **kwargs):
         mean_precip: float,
             Mean annual precipitation. Default is 1e-8 m/s
     """
+    # create the main list
+    main = get_main()
+
+    # set precip to 0.6 * the mean precip value
+    precip = main['state']['evaluators'].append_empty('surface-precipitation')
+    precip.set_type('independent variable constant', ats_input_spec.public.known_specs['independent-variable-constant-evaluator-spec'])
+    precip['value'] = float(mean_precip * .6)
+
     # name = create_unique_name(name, **kwargs)
     template_file = config['spinup_steadystate_template']
     filename = config[f'spinup_steadystate_xml']
@@ -253,25 +292,30 @@ def write_spinup_steadystate(config, main_xml, mean_precip=1e-8, **kwargs):
     
     # load the template file
     template_xml = aio.fromFile(template_file)
-    
-    # populate basic properties for mesh, regions, and soil properties
-    populate_basic_properties(template_xml, main_xml, **kwargs)
 
-    # set the mean avg source as 60% of mean precip
-    precip_el = asearch.find_path(template_xml, ['state', 'evaluators', 'surface-precipitation', 
-                                        'function-constant', 'value'])
-    precip_el.setValue(mean_precip * .6)
+    # update the template xml with the main xml generated here
+    main_xml = ats_input_spec.io.to_xml(main)
+     # populate basic properties for mesh, regions, and soil properties   
+    populate_basic_properties(template_xml, main_xml, **kwargs)    
+
+    # # set the mean avg source as 60% of mean precip
+    # precip_el = asearch.find_path(template_xml, ['state', 'evaluators', 'surface-precipitation', 
+    #                                     'function-constant', 'value'])
+    # precip_el.setValue(mean_precip * .6)
    
     # write to disk
     aio.toFile(template_xml, config[f'spinup_steadystate_xml'])
 
     # make a run directory
-    try:
-        os.mkdir(os.path.join('..', '..', 'model', config[f'spinup_steadystate_rundir']))
-    except FileExistsError:
-        pass
+    rundir = os.path.join('..', '..', 'model', config[f'spinup_steadystate_rundir'])
+    os.makedirs(rundir, exist_ok=True)
 
-def write_transient(config, main_xml, start_date, end_date, cyclic_steadystate=False,
+    # try:
+    #     os.mkdir(os.path.join('..', '..', 'model', config[f'spinup_steadystate_rundir']))
+    # except FileExistsError:
+    #     pass
+
+def write_transient(config, main_xml, start_date, end_date, nlcd_labels, cyclic_steadystate=False,
                     time0 = "1980-1-1", **kwargs):
     """Write transient xml file using template. 
     
@@ -312,11 +356,7 @@ def write_transient(config, main_xml, start_date, end_date, cyclic_steadystate=F
     logging.info(f'Writing {prefix} xml: {filename}')
     # template_filename = template_dir + f'{prefix}-template.xml'
     
-    # load the template file
-    template_xml = aio.fromFile(template_filename)
-
-    # populate basic properties for mesh, regions, and soil properties
-    populate_basic_properties(template_xml, main_xml, **kwargs)
+    main = get_main()
 
     # update the DayMet filenames
     # wind speed uses default?
@@ -326,24 +366,39 @@ def write_transient(config, main_xml, start_date, end_date, cyclic_steadystate=F
     else:
         daymet_filename = config['daymet_filename']
         LAI_filename = config['LAI_filename']
-        
-    for var in ['surface-incoming_shortwave_radiation',
-                'surface-precipitation_rain',
-                'snow-precipitation',
-                'surface-air_temperature',
-                'surface-vapor_pressure_air',
-                'surface-temperature',
-                ]:
-        try:
-            par = asearch.find_path(template_xml, ['state', 'evaluators', var, 'file'])
-        except aerrors.MissingXMLError:
-            pass
-        else:
-            par.setValue(daymet_filename)
-    
-    # update the LAI filenames
-    for par in asearch.findall_path(template_xml, ['canopy-leaf_area_index', 'file']):
-        par.setValue(os.path.join(LAI_filename))
+
+    # add the LAI evaluators    
+    ats_input_spec.public.add_lai_point_evaluators(main, LAI_filename, nlcd_labels)
+    # ats_input_spec.public.add_lai_evaluators(main, config['LAI_filename'], nlcd_labels)
+
+    # # update the LAI filenames
+    # for par in asearch.findall_path(template_xml, ['canopy-leaf_area_index', 'file']):
+    #     par.setValue(os.path.join(LAI_filename))
+
+    # add the DayMet evaluators
+    ats_input_spec.public.add_daymet_box_evaluators(main, os.path.join('..', daymet_filename), True)
+
+    # for var in ['surface-incoming_shortwave_radiation',
+    #             'surface-precipitation_rain',
+    #             'snow-precipitation',
+    #             'surface-air_temperature',
+    #             'surface-vapor_pressure_air',
+    #             'surface-temperature',
+    #             ]:
+    #     try:
+    #         par = asearch.find_path(template_xml, ['state', 'evaluators', var, 'file'])
+    #     except aerrors.MissingXMLError:
+    #         pass
+    #     else:
+    #         par.setValue(daymet_filename)
+
+
+     # load the template file
+    template_xml = aio.fromFile(template_filename)   
+    # update the template xml with the main xml generated here
+    main_xml = ats_input_spec.io.to_xml(main)
+    # populate basic properties for mesh, regions, and soil properties
+    populate_basic_properties(template_xml, main_xml, **kwargs)
     
     # update the start and end time -- start at Oct 1 of year 0, end 10 years later
 
@@ -376,12 +431,12 @@ def write_transient(config, main_xml, start_date, end_date, cyclic_steadystate=F
     # write to disk and make a directory for running the run
     filename = config[f'{prefix}_xml']
     aio.toFile(template_xml, filename)
-    # rundir = config[f'{prefix}_{name}_rundir']
 
-    
-    try:
-        os.mkdir(os.path.join('..', '..', 'model', config[f'{prefix}_rundir']))
-    except FileExistsError:
-        pass
+    rundir = config[f'{prefix}_rundir']
+    os.makedirs(rundir, exist_ok=True)
+    # try:
+    #     os.mkdir(os.path.join('..', '..', 'model', config[f'{prefix}_rundir']))
+    # except FileExistsError:
+    #     pass
 
 
