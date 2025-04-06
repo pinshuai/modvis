@@ -84,7 +84,7 @@ def match_variable_names_by_keyword(names, keyword):
     return matched_name[0]
 
 def plot_water_content(vis_data, 
-                       origin_date = '1980-01-01', layer_ind=0, time_slice = -1, colorbar = False, ax = None, title = None,  **kwargs):
+                       origin_date = '1980-01-01', layer_ind=0, time_slice = -1, colorbar = True, ax = None, title = None,  **kwargs):
     """plot water content in a single layer in the subsurface.
     Parameters:
         vis_data, ats_xdmf.VisFile object
@@ -112,7 +112,7 @@ def plot_water_content(vis_data,
 
     sat_vname = match_variable_names_by_keyword(list(vis_data.d.keys()), "saturation_liquid")
     por_vname = match_variable_names_by_keyword(list(vis_data.d.keys()), "base_porosity")
-    at = vis_data.getArray(sat_vname)
+    sat = vis_data.getArray(sat_vname)
     por = vis_data.getArray(por_vname)
     
     # layer ordered from bottom to top
