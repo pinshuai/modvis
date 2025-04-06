@@ -62,6 +62,27 @@ def get_time(vis_data, time_slice=None, **kwargs):
     else:
         return times
 
+def match_variable_names_by_keyword(names, keyword):
+    """
+    Returns a list of names that contain any of the specified keywords.
+
+    Args:
+        names (list of str): List of variable names
+        keywords (list of str): Keyword to search for.
+
+    Returns:
+        str: matched variable name
+    """
+    keyword_lower = keyword.lower()
+    matched_name = [name for name in names if any(keyword_lower in name.lower())]
+
+    if len(matched_name) > 1:
+        raise KeyError(f"Duplicated names found!")
+    elif len(matched_name) == 0:
+        raise KeyError(f"No matching name!")
+
+    return matched_name[0]
+
 def plot_water_content(vis_data, 
                        origin_date = '1980-01-01', layer_ind=0, time_slice = -1, colorbar = False, ax = None, title = None,  **kwargs):
     """plot water content in a single layer in the subsurface.
@@ -87,9 +108,11 @@ def plot_water_content(vis_data,
 
     times = vis_data.times
     datetime = rmLeapDays(times, origin_date = origin_date)
-    
-    sat = vis_data.getArray("saturation_liquid.cell.0")
-    por = vis_data.getArray("porosity.cell.0")
+
+    sat_vname = match_variable_names_by_keyword(list(vis_data.d.keys()), "saturation_liquid")
+    por_vname = match_variable_names_by_keyword(list(vis_data.d.keys()), "base_porosity")
+    sat = vis_data.getArray(sat_vname)
+    por = vis_data.getArray(por_vname)
     
     # layer ordered from bottom to top
     layers = np.arange(map.shape[-1])[::-1]
