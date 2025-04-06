@@ -74,7 +74,7 @@ def match_variable_names_by_keyword(names, keyword):
         str: matched variable name
     """
     keyword_lower = keyword.lower()
-    matched_name = [name for name in names if any(keyword_lower in name.lower())]
+    matched_name = [name for name in names if keyword_lower in name.lower()]
 
     if len(matched_name) > 1:
         raise KeyError(f"Duplicated names found!")
@@ -106,12 +106,13 @@ def plot_water_content(vis_data,
     conn = vis_data.conn
     map = vis_data.map
 
-    times = vis_data.times
-    datetime = rmLeapDays(times, origin_date = origin_date)
+    times, time_idx = get_time(vis_data, time_slice, origin_date = origin_date)
+    # times = vis_data.times
+    # datetime = rmLeapDays(times, origin_date = origin_date)
 
     sat_vname = match_variable_names_by_keyword(list(vis_data.d.keys()), "saturation_liquid")
     por_vname = match_variable_names_by_keyword(list(vis_data.d.keys()), "base_porosity")
-    sat = vis_data.getArray(sat_vname)
+    at = vis_data.getArray(sat_vname)
     por = vis_data.getArray(por_vname)
     
     # layer ordered from bottom to top
@@ -119,8 +120,8 @@ def plot_water_content(vis_data,
     ilayer = layers[layer_ind]
 #     icoord = ordered_centroids[:, ilayer, :]
     icells = map[:, ilayer].flatten()
-    isat = sat[time_slice, :, ilayer]
-    ipor = por[time_slice, :, ilayer]
+    isat = sat[time_idx, :, ilayer]
+    ipor = por[time_idx, :, ilayer]
     idat = isat*ipor
     
     iconn = conn[icells, -3:]
@@ -133,7 +134,7 @@ def plot_water_content(vis_data,
     tpc = ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], iconn, facecolors= idat, edgecolors = 'w', linewidth=0.01,  **kwargs)
     
     if title is None:
-        ax.set_title(f"Time: {datetime[time_slice].date()}; Layer: {layer_ind+1}")
+        ax.set_title(f"Time: {times[time_idx].date()}; Layer: {layer_ind+1}")
     else:
         ax.set_title(title)
     ax.set_xlabel("Easting [m]")
@@ -190,7 +191,6 @@ def plot_column_head(vis_data, origin_date='1980-01-01', col_ind = 0, cell_id = 
         sat_idx = [np.where(ih[i, :] > 0)[0][-1] for i in range(len(times))]
     except:
         unsat_time_id = np.where(ih[:, 0] < 0)[0]
-#         print(times[unsat_time_id.tolist()])
         logging.debug(f"water table falls below the bottom at times: {times[unsat_time_id.tolist()][0].date()} d. Use the bottom cell instead.")
         sat_idx = [0]*len(times)
 
@@ -378,7 +378,6 @@ def plot_column_data(vis_data, var_name, origin_date='1980-01-01', col_ind = 0, 
     if plot_contour:
         if levels == None:
             levels = [atm_p]
-            # print(levels)
         cc = plt.contour(times,
                            iz_coord,
                            idat.T,
