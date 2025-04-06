@@ -108,9 +108,13 @@ def load_nwis(service='dv', parameterCd='00060', SI_unit=True, insert_NA=True, r
     """
     df = nwis.get_record(service=service, parameterCd=parameterCd, **kwargs)
     assert len(df) > 0, "Returned empty df!"
-    
+    # print(df.head())
+
+    # check for column names
+    assert "00060_Mean" in df.columns, "No column named 00060_Mean! Double check the returned df."
+
     # remove outliers and nan index
-    df[df.iloc[:, 0] < 0 ] = np.nan
+    df[df.loc[:, "00060_Mean"] < 0 ] = np.nan
     df = df[df.index.notnull()]
     
     if SI_unit:
