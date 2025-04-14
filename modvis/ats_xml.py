@@ -321,7 +321,8 @@ def write_spinup_steadystate(config, mean_precip=1e-8,
 def write_transient(config, start_date, end_date, subsurface_props = {},  
                     nlcd_labels= {}, labeled_sets = {}, side_sets = {}, subcatchment_labels=None, 
                     cyclic_steadystate=False,
-                    time0 = "1980-1-1", **kwargs):
+                    time0 = "1980-1-1", nyears_cyclic_steadystate=10, 
+                    **kwargs):
     """Write transient xml file using template. 
     
     Parameters:
@@ -336,6 +337,8 @@ def write_transient(config, start_date, end_date, subsurface_props = {},
         time0: str,
             Default origin time in the model. This should be consistent with all other input files 
             including forcing and LAI.
+        nyears_cyclic_steadystate: int,
+            Number of years used for spinup cyclic. Default is 10.
             
     Returns:
         None
@@ -346,7 +349,8 @@ def write_transient(config, start_date, end_date, subsurface_props = {},
         # start_year = 1980
         # end_year = 1990
         start_datetime = datetime.datetime.strptime("1980-10-1", '%Y-%m-%d').date()
-        end_datetime = datetime.datetime.strptime("1990-10-1", '%Y-%m-%d').date()        
+        # end_datetime = datetime.datetime.strptime("1990-10-1", '%Y-%m-%d').date()        
+        end_datetime = start_datetime + datetime.timedelta(days= 365*nyears_cyclic_steadystate)
         previous = 'spinup_steadystate'
         template_filename = config['spinup_cyclic_template']
 
