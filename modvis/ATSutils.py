@@ -1,4 +1,8 @@
-"""Functions for post-processing ATS models."""
+"""Functions for post-processing ATS models.
+
+Authors: Pin Shuai (pin.shuai@usu.edu)
+
+"""
 import os, re, scipy, glob, itertools
 import numpy as np
 import pandas as pd
@@ -6,12 +10,14 @@ import h5py
 from math import sqrt
 from sklearn.metrics import mean_squared_error
 from scipy.stats.stats import pearsonr
+from scipy.spatial import cKDTree
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import datetime as dt
 from datetime import datetime, timedelta
 import time
 from calendar import isleap
+
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s: %(message)s')
 import sys
@@ -305,7 +311,7 @@ def plot_timestep(work_dir, fname_run_log=None):
 
     for line in searchlines[:]:
         if "Cycle" in line and "Time" in line: 
-            splitline = re.split("\s+|\x1b|,", line)
+            splitline = re.split(r"\s+|\x1b|,", line)
             # print(splitline)
             # search for keywords "Cycle" and "Time", and "dt" in each line
             cycle_idx = splitline.index("Cycle")
@@ -322,18 +328,18 @@ def plot_timestep(work_dir, fname_run_log=None):
         # find computing time and #of cores used 
         # find #of cores used
         if "TimeMonitor" in line and "|" in line:
-            splitline = re.split("\s+|,", line)
+            splitline = re.split(r"\s+|,", line)
             ncores = splitline[-3]
         elif "TimeMonitor" in line:
-            splitline = re.split("\s+|,", line)
+            splitline = re.split(r"\s+|,", line)
             # print(splitline)
             ncores = splitline[-3]
         # find wallclock time. This may change in different ATS version.
         if "Simulation Driver  |  cycle" in line:
-            splitline = re.split("\s+|,", line) 
+            splitline = re.split(r"\s+|,", line) 
             walltime = float(splitline[4])/3600 #convert s to h
         elif "4: solve" in line:
-            splitline = re.split("\s+|,", line) 
+            splitline = re.split(r"\s+|,", line) 
             # print(splitline)
             walltime = float(splitline[2])/3600
 
@@ -845,5 +851,12 @@ def load_output(model_dir, WB_filename, timestep = 'D', origin_date =
     
     return df
 
-
+def get_neighbour_mapping(centroids_1, centroids_2, k): # make sure thse centroids are 2D coordinates only (x,y)                                                                                                                      
+# get distances and mapping of neighbours                                                                                                                                                                                             
+    ctree = cKDTree(centroids_1[:,:2])
+    x=centroids_2[:,:2]
+    ds, inds =  ctree.query(x, k, workers=-1)
+    # ds: distances to the k nearest neighbors for each point in centroids_2
+    # inds: indices of the k nearest neighbors in centroids_1 for each point in centroids
+    return ds, inds
 
