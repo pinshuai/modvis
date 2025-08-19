@@ -15,6 +15,7 @@ import numpy as np
 import h5py
 import shapely
 import math
+from scipy.spatial import cKDTree
 import matplotlib.collections
 from matplotlib import pyplot as plt
 import logging
@@ -54,12 +55,20 @@ def time_unit_conversion(value, input_unit, output_unit):
     value2sec = value * time_in_seconds[input_unit]
     output_value = value2sec / time_in_seconds[output_unit]
     return output_value
-    
+
+def get_neighbour_mapping(centroids_1, centroids_2, k): # make sure thse centroids are 2D coordinates only (x,y)                                                                                                                      
+# get distances and mapping of neighbours                                                                                                                                                                                             
+    ctree = cKDTree(centroids_1[:,:2])
+    x=centroids_2[:,:2]
+    ds, inds =  ctree.query(x, k, workers=-1)
+    # ds: distances to the k nearest neighbors for each point in centroids_2
+    # inds: indices of the k nearest neighbors in centroids_1 for each point in centroids
+    return ds, inds
 
 class VisFile:
     """Class managing the reading of ATS visualization files."""
     def __init__(self, directory='.', domain=None, prefix='ats_vis', model_time_unit='yr', 
-                 return_time_unit='d', load_mesh=False, ats_version='dev', mixed_element=False, **kwargs):
+                 return_time_unit='d', load_mesh=True, ats_version='dev', mixed_element=False, **kwargs):
         """Create a VisFile object.
 
         Parameters
@@ -81,7 +90,7 @@ class VisFile:
         return_time_unit: str, default is 'd'
           Time unit used for returned object self.times. Default is 'd'
         load_mesh, bool
-            load mesh files if true. Default to False.
+            load mesh files if true. Default to True.
         ats_version, str or float, optional. Default is 'dev'
             Version of ats used in the simulations. Options include 'dev' (version>=1.5), '1.4', '1.3', '1.2'. 
             This is used to parse the variable names. E.g., 'cell_volume' ('dev' version>=1.5) vs 'cell_volume.cell.0' (older versions)
@@ -140,9 +149,22 @@ class VisFile:
         self.map = None
         self.version = ats_version
         if load_mesh:
-            self.loadMesh(**kwargs)
+            
             # get vertex coords and connectivity for single element mesh
-            if not mixed_element:
+            if mixed_element:
+                self.loadMesh(columnar=True, mixed_element=mixed_element) # Load mesh in columnar format for both surface and subsurface domain so we can map variable to mesh polygons
+                mesh_polygons = get_mesh_polygons(os.path.join(directory, f'{prefix}_surface_mesh.h5'))
+                mesh_poly_centroids = np.array([poly.centroid.coords[0] for poly in mesh_polygons]) # get mesh centroids
+                surface_centroids_2d = self.centroids[:,0,:2]  
+
+                # create mapping
+                ds, subsurf_to_surf_mapping_inds = get_neighbour_mapping(surface_centroids_2d, mesh_poly_centroids, 1)                                                                                                   
+                remapping = dict([(True, subsurf_to_surf_mapping_inds), (False, slice(None))]) 
+                self.remapping = remapping
+                self.mesh_polygons = mesh_polygons
+
+            else:
+                self.loadMesh(**kwargs)
                 etype, vertex_coords, conn = meshXYZ(self.directory, self.mesh_filename)
                 self.etype = etype
                 self.vertex_xyz = vertex_coords
@@ -322,7 +344,8 @@ class VisFile:
             return reorder(val, self.map)
             
     
-    def loadMesh(self, cycle=None, order=None, shape=None, columnar=False, round=5):
+    def loadMesh(self, cycle=None, order=None, shape=None, columnar=False, round=5, 
+                 mixed_element=False):
         """Load and reorder centroids and volumes of mesh.
 
         Parameters
@@ -348,8 +371,8 @@ class VisFile:
         """
         if cycle is None:
             cycle = self.cycles[0]
-        
-        centroids = meshElemCentroids(self.directory, self.mesh_filename, cycle, round)
+
+        centroids = meshElemCentroids(self.directory, self.mesh_filename, cycle, round, mixed_element=mixed_element)
         if order is None and shape is None and not columnar:
             self.map = None
             self.centroids = centroids
@@ -505,7 +528,7 @@ def meshXYZ_old(directory=".", filename="ats_vis_mesh.h5", key=None):
 
 
 
-def meshXYZ(directory=".", filename="ats_vis_mesh.h5", key=None):
+def meshXYZ(directory=".", filename="ats_vis_mesh.h5", key=None, mixed_element=False):
     """Reads a mesh nodal coordinates and connectivity.
 
     Parameters
@@ -517,6 +540,8 @@ def meshXYZ(directory=".", filename="ats_vis_mesh.h5", key=None):
     key : str, optional
       Key of mesh within the file.  This is the cycle number, defaults to the
       first mesh found in the file.
+    mixed_element : bool, optional
+      If True, skip converting conns to np.array.
 
     Returns
     -------
@@ -540,13 +565,14 @@ def meshXYZ(directory=".", filename="ats_vis_mesh.h5", key=None):
         coords = mesh['Nodes'][:]
         elem_type, conns = read_conn(elem_conn)
 
-        nnodes_per_elem = elem_typed_node_counts[elem_type]
-        if len(elem_conn) % (nnodes_per_elem + 1) != 0:
-            raise ValueError('This reader only processes single-element-type meshes.')
-        n_elems = int(len(elem_conn) / (nnodes_per_elem+1))
-        conns = elem_conn.reshape((n_elems, nnodes_per_elem+1))
-        if (np.any(conns[:,0] != elem_conn[0])):
-            raise ValueError('This reader only processes single-element-type meshes.')
+        if not mixed_element:
+            nnodes_per_elem = elem_typed_node_counts[elem_type]
+            if len(elem_conn) % (nnodes_per_elem + 1) != 0:
+                raise ValueError('This reader only processes single-element-type meshes.')
+            n_elems = int(len(elem_conn) / (nnodes_per_elem+1))
+            conns = elem_conn.reshape((n_elems, nnodes_per_elem+1))
+            if (np.any(conns[:,0] != elem_conn[0])):
+                raise ValueError('This reader only processes single-element-type meshes.')
 
     return elem_type, coords, conns
 
@@ -633,7 +659,8 @@ def meshElemPolygons(etype, coords, conn):
 
     return coords2
 
-def meshElemCentroids(directory=".", filename="ats_vis_mesh.h5", key=None, round=5):
+def meshElemCentroids(directory=".", filename="ats_vis_mesh.h5", key=None, round=5, 
+                      mixed_element=False):
     """Reads and calculates mesh element centroids.
 
     Parameters
@@ -655,7 +682,7 @@ def meshElemCentroids(directory=".", filename="ats_vis_mesh.h5", key=None, round
       2D nodal coordinate array.  Shape is (n_elems, dimension).
 
     """
-    elem_type, coords, conn = meshXYZ(directory, filename, key)
+    elem_type, coords, conn = meshXYZ(directory, filename, key, mixed_element=mixed_element)
     centroids = np.zeros((len(conn),3),'d')
     for i,elem in enumerate(conn):
         elem_coords = np.array([coords[gid] for gid in elem])
