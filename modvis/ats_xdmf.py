@@ -59,7 +59,7 @@ def time_unit_conversion(value, input_unit, output_unit):
 class VisFile:
     """Class managing the reading of ATS visualization files."""
     def __init__(self, directory='.', domain=None, prefix='ats_vis', model_time_unit='yr', 
-                 return_time_unit='d', load_mesh=False, ats_version='dev', **kwargs):
+                 return_time_unit='d', load_mesh=False, ats_version='dev', mixed_element=False, **kwargs):
         """Create a VisFile object.
 
         Parameters
@@ -85,7 +85,8 @@ class VisFile:
         ats_version, str or float, optional. Default is 'dev'
             Version of ats used in the simulations. Options include 'dev' (version>=1.5), '1.4', '1.3', '1.2'. 
             This is used to parse the variable names. E.g., 'cell_volume' ('dev' version>=1.5) vs 'cell_volume.cell.0' (older versions)
-
+        mixed_element : bool, optional
+            If True, allows for mixed element types in the mesh. No need for getting `conns` and `vertex_xyz` separately. Default is False.
         Returns
         -------
         self : VisFile object
@@ -140,10 +141,12 @@ class VisFile:
         self.version = ats_version
         if load_mesh:
             self.loadMesh(**kwargs)
-            etype, vertex_coords, conn = meshXYZ_old(self.directory, self.mesh_filename)
-            self.etype = etype
-            self.vertex_xyz = np.array(list(vertex_coords.values()))
-            self.conn = conn        
+            # get vertex coords and connectivity for single element mesh
+            if not mixed_element:
+                etype, vertex_coords, conn = meshXYZ(self.directory, self.mesh_filename)
+                self.etype = etype
+                self.vertex_xyz = vertex_coords
+                self.conn = conn        
         
     def __enter__(self):
         return self
@@ -475,10 +478,7 @@ def meshXYZ_old(directory=".", filename="ats_vis_mesh.h5", key=None):
 
         mesh = dat[key]['Mesh']
         elem_conn = mesh['MixedElements'][:,0]
-        # coords = mesh['Nodes'][:]
-        # elem_type, conns = read_conn(elem_conn)
 
-    # return elem_type_list, coords, conns
         etype = elem_type_list[elem_conn[0]]
         if (etype == 'PRISM'):
             nnodes_per_elem = 6
@@ -507,9 +507,6 @@ def meshXYZ_old(directory=".", filename="ats_vis_mesh.h5", key=None):
 
 def meshXYZ(directory=".", filename="ats_vis_mesh.h5", key=None):
     """Reads a mesh nodal coordinates and connectivity.
-
-    Note this only currently works for fixed structure meshes, i.e. not
-    arbitrary polyhedra.
 
     Parameters
     ----------
@@ -542,6 +539,14 @@ def meshXYZ(directory=".", filename="ats_vis_mesh.h5", key=None):
         elem_conn = mesh['MixedElements'][:,0]
         coords = mesh['Nodes'][:]
         elem_type, conns = read_conn(elem_conn)
+
+        nnodes_per_elem = elem_typed_node_counts[elem_type]
+        if len(elem_conn) % (nnodes_per_elem + 1) != 0:
+            raise ValueError('This reader only processes single-element-type meshes.')
+        n_elems = int(len(elem_conn) / (nnodes_per_elem+1))
+        conns = elem_conn.reshape((n_elems, nnodes_per_elem+1))
+        if (np.any(conns[:,0] != elem_conn[0])):
+            raise ValueError('This reader only processes single-element-type meshes.')
 
     return elem_type, coords, conns
 
@@ -686,6 +691,8 @@ def structuredOrdering(coordinates, order=None, shape=None, columnar=False):
 
     Returns
     -------
+    ordering : List[str]
+      Order used to sort, e.g. ['x', 'y']
     ordered_coordinates : np.ndarray
       The re-ordered coordinates, shape (n_coordinates, dimension).
     map : np.ndarray(int)
@@ -702,33 +709,34 @@ def structuredOrdering(coordinates, order=None, shape=None, columnar=False):
     Sort a column of 100 unordered cells into a 1D sorted array.  The
     input and output are both of shape (100,3).
 
-      > ordered_centroids, map = structuredOrdering(centroids, list())
+      > order, ordered_centroids, map = structuredOrdering(centroids, list())
 
     Sort a logically structured transect of size NX x NY x NZ =
     (100,1,20), where x is structured and z may vary as a function of
     x.  Both input and output are of shape (2000, 3), but the output
     is sorted with each column appearing sequentially and the
-    z-dimension fastest-varying.  map is of shape (2000,).
-    
-      > ordered_centroids, map = structuredOrdering(centroids, ['z',])
+    z-dimension fastest-varying.  map is of shape (2000,).  The
+    returned order is ['z',].
+
+      > order, ordered_centroids, map = structuredOrdering(centroids, ['z',])
 
     Do the same, but this time reshape into a 2D array.  Now the
     ordered_centroids are of shape (100, 20, 3), and the map is of
-    shape (100, 20).
-    
-      > ordered_centroids, map = structuredOrdering(centroids, ['z',], [20,])
+    shape (100, 20). The returned order is ['z', 'xy'].
+
+      > order, ordered_centroids, map = structuredOrdering(centroids, ['z',], [20,])
 
     Do the same as above, but detect the shape.  This works only
-    because the mesh is columnar.
+    because the mesh is columnar. The returned order is ['z', 'xy'].
 
-      > ordered_centroids, map = structuredOrdering(centroids, columnar=True)
+      > order, ordered_centroids, map = structuredOrdering(centroids, columnar=True)
 
     Sort a 3D map-view "structured-in-z" mesh into arbitrarily-ordered
     x and y columns.  Assume there are 1000 map-view triangles, each
     extruded 20 cells deep.  The input is is of shape (20000, 3) and
-    the output is of shape (1000, 20, 3).
+    the output is of shape (1000, 20, 3). The returned order is ['z', 'xy'].
 
-      > ordered_centroids, map = structuredOrdering(centroids, columnar=True)
+      > order, ordered_centroids, map = structuredOrdering(centroids, columnar=True)
 
     Note that map can be used with the reorder() function to place
     data in this ordering.
@@ -839,7 +847,7 @@ def read_conn(elem_conn):
     Returns
     -------
     elem_type : str
-        The element type
+        The element type. One of the elem_type_list() or 'MIXED'.
     conns : list
         The connectivity list
     """
@@ -851,7 +859,7 @@ def read_conn(elem_conn):
         etypes.append(etype)
         conns.append(conn)
     if len(set(etypes)) == 1:
-        elem_type = set(etypes).pop()
+        elem_type = etypes[0]
     else:
         elem_type = 'MIXED'
     return elem_type, conns
