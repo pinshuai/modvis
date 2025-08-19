@@ -432,7 +432,7 @@ class VisFile:
 
         return ax, axcb
     
-elem_type = {3:'POLYGON',
+elem_type_list = {3:'POLYGON',
              5:'QUAD',
              8:'PRISM',
              9:'HEX',
@@ -475,11 +475,11 @@ def meshXYZ_old(directory=".", filename="ats_vis_mesh.h5", key=None):
 
         mesh = dat[key]['Mesh']
         elem_conn = mesh['MixedElements'][:,0]
-        coords = mesh['Nodes'][:]
-        elem_type, conns = read_conn(elem_conn)
+        # coords = mesh['Nodes'][:]
+        # elem_type, conns = read_conn(elem_conn)
 
-    # return elem_type, coords, conns
-        etype = elem_type[elem_conn[0]]
+    # return elem_type_list, coords, conns
+        etype = elem_type_list[elem_conn[0]]
         if (etype == 'PRISM'):
             nnodes_per_elem = 6
         elif (etype == 'HEX'):
@@ -581,7 +581,7 @@ def meshXYZPolygon(dat, key):
     conn = []
     i = 0
     while i < len(elem_conn):
-        etype = elem_type[elem_conn[i]]; i+=1
+        etype = elem_type_list[elem_conn[i]]; i+=1
         if (etype == 'QUAD'):
             nnodes = 4
         elif (etype == 'TRIANGLE'):
@@ -829,7 +829,20 @@ elem_typed_node_counts = { 'QUAD' : 4,
 
 
 def read_conn(elem_conn):
-    """Reads an array, called MixedElements in the HDF5 file, to get conn"""
+    """Reads an array, called MixedElements in the HDF5 file, to get conn
+
+    Parameters
+    ----------
+    elem_conn : np.ndarray
+        The element connectivity array
+
+    Returns
+    -------
+    elem_type : str
+        The element type
+    conns : list
+        The connectivity list
+    """
     i = 0
     etypes = []
     conns = []
@@ -855,7 +868,7 @@ def read_element_dirty(elem_conn, i):
 
     """
     try:
-        etype = elem_type[elem_conn[i]]
+        etype = elem_type_list[elem_conn[i]]
     except KeyError:
         raise RuntimeError(f'This reader is not implemented for elements of type {elem_conn[i]} -- what type is this?')
     if etype == 'POLYGON':
