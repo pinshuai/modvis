@@ -9,7 +9,7 @@
 **A python package for model visualization.**
 
 
--   Free software: MIT license
+-   Free software: GPL license
 -   Documentation: https://pinshuai.github.io/modvis
     
 
@@ -43,18 +43,43 @@ pip install -e .
 
 ## Quick start
 
-To plot variables on the surface mesh:
+### Plot variables on triangular meshes:
 
 ```python
 import modvis.ats_xdmf as xdmf
 import modvis.plot_vis_file as pv
 
 # import visdump file
-visfile = xdmf.VisFile(model_dir='.', domain='surface', load_mesh=True)
+surface_vis = xdmf.VisFile(model_dir='.', domain='surface')
+subsurface_vis = xdmf.VisFile(model_dir='.', domain=None, columnar=True)
 
 # plot surface ponded depth
-pv.plot_surface_data(visfile, var_name="surface-ponded_depth", log=True,
+pv.plot_surface_data(surface_vis, var_name="surface-ponded_depth", log=True,
                               time_slice="2019-05-01", vmin=0.01, vmax=4)
+
+# plot subsurface saturation. Note layer index is ordered from top to bottom (0--top).
+pv.plot_layer_data(subsurface_vis, var_name = "saturation_liquid", 
+                             layer_ind = 0, time_slice= 0,
+                              cmap = "coolwarm")
+```
+
+### Plot variables on mixed-element meshes:
+
+```python
+import modvis.ats_xdmf as xdmf
+import modvis.plot_vis_file as pv
+
+# import visdump file
+surface_vis = xdmf.VisFile(model_dir='.', domain='surface', mixed_element=True)
+subsurface_vis = xdmf.VisFile(model_dir='.', domain=None, mixed_element=True)
+
+# plot surface ponded depth
+pv.plot_surface_data(surface_vis, var_name="surface-ponded_depth", 
+                              time_slice="2019-05-01", mixed_element=True)
+
+# plot subsurface saturation. Note layer index is ordered from top to bottom (0--top).
+pv.plot_layer_data(subsurface_vis, var_name = "saturation_liquid", 
+                             layer_ind = 0, time_slice= 0, mixed_element=True)
 ```
 
 ## Examples
@@ -64,6 +89,6 @@ Jupyter notebook examples can be found under [examples/notebooks](./examples/not
 
 ## Credits
 
-This work is supported by LDRD funding from PNNL.
+This work is supported by LDRD funding from PNNL, with continuing support from the Utah Water Research Laboratory.
 
 This package was created with [Cookiecutter](https://github.com/cookiecutter/cookiecutter) and the [giswqs/pypackage](https://github.com/giswqs/pypackage) project template.
