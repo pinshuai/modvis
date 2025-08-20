@@ -9,6 +9,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 from modvis.ATSutils import rmLeapDays
 # import fiona, shapely
 from datetime import datetime
+import geopandas as gpd
 
 rho_m = 55500 # moles/m^3, water molar density
 rho = 997
@@ -385,7 +386,10 @@ def plot_column_data(vis_data, var_name, origin_date='1980-01-01', col_ind = 0, 
         return fig, ax
     except:
         return
-def plot_layer_data(vis_data, var_name, origin_date = '1980-01-01', layer_ind = 0, time_slice = -1, cmap = "turbo", colorbar = True, clabel = None, ax = None, log = False, vmin = None, vmax = None, linthresh = 0.01, linscale = 0.01, **kwargs):
+def plot_layer_data(vis_data, var_name, origin_date = '1980-01-01', layer_ind = 0, 
+                    time_slice = -1, cmap = "viridis", colorbar = True, clabel = None, 
+                    ax = None, log = False, vmin = None, vmax = None, linthresh = 0.01, 
+                    linscale = 0.01, mixed_element = False, **kwargs):
     """plot variable in a single layer in the subsurface.
     Parameters:
         vis_data, ats_xdmf.VisFile object
@@ -394,7 +398,8 @@ def plot_layer_data(vis_data, var_name, origin_date = '1980-01-01', layer_ind = 
         origin_date, str
             original date used in the model
         layer_ind, int, 0-indexed
-            layer id with 0 being on top and -1 on bottom. Note the actual layers are ordered from bottom up.
+            layer id with 0 being on top and -1 on bottom. 
+            Note the actual layers in the mesh are ordered from bottom up with 0 being at the bottom.
         time_slice, int, 0-indexed
             time index-0,1,...,-1
         cmap, str
@@ -410,35 +415,45 @@ def plot_layer_data(vis_data, var_name, origin_date = '1980-01-01', layer_ind = 
             keyword for SymLogNorm        
         linscale, float
             see keyword for SymLogNorm
-        
+        mixed_element, bool
+            whether to plot mixed element meshes
+
     Returns:
         fig, ax   
     """
-    # ordered_centroids = vis_data.centroids
-    vertex_xyz = vis_data.vertex_xyz
-    conn = vis_data.conn
+    if mixed_element:
+        mesh_polygons = vis_data.mesh_polygons
+        remapping = vis_data.remapping
+    else:
+        vertex_xyz = vis_data.vertex_xyz
+        conn = vis_data.conn
     map = vis_data.map
-#     times = vis_data.times
-#     datetime = rmLeapDays(times)
+
     times, time_idx = get_time(vis_data, time_slice, origin_date = origin_date)
     
-#     dat = vis_data.getArray(var_name)
     if isinstance(var_name, str):
-        dat = vis_data.getArray(var_name)
+        if mixed_element:
+            dat = vis_data.getArray(var_name)[:][:, remapping[True], :]
+        else:
+            dat = vis_data.getArray(var_name)
     elif isinstance(var_name, (np.ndarray, np.generic)):
+        # TODO: need to add sth for mixed_element
         dat = var_name
         assert(dat.shape[0] == len(times))
     else:
         raise RuntimeError("Must provide string of variable or np.array of data!")
     
-    # layer ordered from bottom to top
+    # layer ordered from bottom to top (i.e., 0--bottom, -1--top)
+    # here we reverse the order so 0--top, -1--bottom for easier selection
     layers = np.arange(map.shape[-1])[::-1]
     ilayer = layers[layer_ind]
-#     icoord = ordered_centroids[:, ilayer, :]
-    icells = map[:, ilayer].flatten()
-    # idat = dat[time_idx, icells]
+
     idat = dat[time_idx, :, ilayer]
-    iconn = conn[icells, -3:]
+
+    if not mixed_element:
+        icells = map[:, ilayer].flatten()
+        iconn = conn[icells, -3:]
+
     if vmin is None:
         vmin = np.nanmin(dat)
     if vmax is None: 
@@ -446,15 +461,23 @@ def plot_layer_data(vis_data, var_name, origin_date = '1980-01-01', layer_ind = 
     if ax == None:
         fig, ax = plt.subplots(1,1, figsize=(8, 4))    
     ax.set_aspect('equal')
-    if log:
-        tpc = ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], iconn, 
-                       facecolors= idat, linewidth=0.01, cmap = cmap, 
-                       norm=matplotlib.colors.SymLogNorm(linthresh = linthresh, linscale = linscale, vmin=vmin, vmax=vmax),
-                       **kwargs)
+
+    if mixed_element:
+        gdf = gpd.GeoDataFrame({'value': idat, 'geometry': mesh_polygons})
+        gdf.plot(column='value', ax=ax, cmap=cmap, legend=False)
+        # Create a normalizer and ScalarMappable
+        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+        sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)        
     else:
-        tpc = ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], iconn,
-                facecolors= idat, cmap = cmap, linewidth=0.01, 
-                vmin = vmin, vmax = vmax, **kwargs)
+        if log:
+            tpc = ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], iconn, 
+                        facecolors= idat, linewidth=0.01, cmap = cmap, 
+                        norm=matplotlib.colors.SymLogNorm(linthresh = linthresh, linscale = linscale, vmin=vmin, vmax=vmax),
+                        **kwargs)
+        else:
+            tpc = ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], iconn,
+                    facecolors= idat, cmap = cmap, linewidth=0.01, 
+                    vmin = vmin, vmax = vmax, **kwargs)
     
     ax.set_title(f"Time: {times[time_idx].date()}; Layer: {layer_ind+1}")
     ax.set_xlabel("Easting [m]")
@@ -464,23 +487,30 @@ def plot_layer_data(vis_data, var_name, origin_date = '1980-01-01', layer_ind = 
             clabel = var_name 
         elif clabel is None:
             clabel = ''
-#         clabel = var_name
-        cb = plt.colorbar(tpc)
-        cb.ax.set_ylabel(clabel, labelpad=0.3)
-#     plt.tight_layout()
+        if mixed_element:
+            cb = plt.colorbar(sm, ax=ax, label=clabel)
+        else:
+            cb = plt.colorbar(tpc)
+            cb.ax.set_ylabel(clabel, labelpad=0.3)
     
-    if ax is None:
-        return fig, ax, tpc
+    if mixed_element:
+        try:
+            return fig, ax
+        except:
+            return ax
     else:
-        return ax, tpc
+        try:
+            return fig, ax, tpc
+        except:
+            return ax, tpc
 
 def plot_surface_data(vis_data, var_name,
                       origin_date="1980-01-01", time_slice = -1,
-                      facecolors = None,  subset= False, subset_idx = None,
+                      facecolors = None, cmap = 'viridis', subset= False, subset_idx = None,
                       colorbar = True, clabel = None, title = True, ax = None,
                       log = False, vmin = None, vmax = None, robust = False,
                       contour = False, nlevel = 5, linthresh = 0.01, linscale =
-                      0.01, data_lim = None, **kwargs):
+                      0.01, data_lim = None, mixed_element = False, **kwargs):
     """plot variable on the surface.
     Parameters:
         vis_data, ats_xdmf.VisFile object
@@ -516,18 +546,30 @@ def plot_surface_data(vis_data, var_name,
         data_lim, None or list
             Only show data within this range if provided. Out ranged values are
             marked as Nans. 
+        mixed_element, bool
+            whether the mesh is mixed element or not. Default to False
     Returns:
         fig, ax   
     """
-    vertex_xyz = vis_data.vertex_xyz
-    conn = vis_data.conn
-    volume = vis_data.volume
+
+    if mixed_element:
+        mesh_polygons = vis_data.mesh_polygons
+        remapping = vis_data.remapping
+    else:
+        vertex_xyz = vis_data.vertex_xyz
+        conn = vis_data.conn
+        volume = vis_data.volume
+        iconn = conn[:, -3:]
 
     times, time_idx = get_time(vis_data, time_slice, origin_date=origin_date)
     
     if isinstance(var_name, str):
-        dat = vis_data.getArray(var_name)
+        if mixed_element:
+            dat = vis_data.getArray(var_name)[:][:, remapping[True], 0]
+        else:
+            dat = vis_data.getArray(var_name)
     elif isinstance(var_name, (np.ndarray, np.generic)):
+        # TODO: need to add sth for mixed_element
         dat = var_name
         assert(dat.shape[0] == len(times))
     else:
@@ -550,7 +592,7 @@ def plot_surface_data(vis_data, var_name,
         else:
             logging.info("No unit convertion.")
             unit = ''      
-    
+    # subset timestamp
     idat = dat[time_idx, :]
 
     if data_lim is not None:
@@ -558,16 +600,19 @@ def plot_surface_data(vis_data, var_name,
             idat[idat < data_lim[0]] = np.nan
         if data_lim[1] is not None:
             idat[idat > data_lim[1]] = np.nan
-        
 
-    iconn = conn[:, -3:]
-    
+    if vmin is None:
+        vmin = idat.min()
+    if vmax is None:
+        vmax = idat.max()
+
     if robust:
         vmin, vmax = np.nanpercentile(idat, [2, 98])
         
     if facecolors is not None:
         colors = facecolors
     else:
+        # TODO: add remapping for mixed element mesh
         colors = idat
         
     if subset:
@@ -578,30 +623,37 @@ def plot_surface_data(vis_data, var_name,
         fig, ax = plt.subplots(1,1, figsize=(8, 4))
     ax.set_aspect('equal')
     
-    if log and not contour: 
-        # use SymLogNorm to normalize in both positive and negative directions.
-        tpc = ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], iconn, 
-                       facecolors= colors, linewidth=0.01,norm=matplotlib.colors.SymLogNorm(linthresh=linthresh, linscale=linscale, vmin=vmin, vmax=vmax), **kwargs)
-    elif not contour: 
-        tpc = ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], iconn, 
-                       facecolors= colors, linewidth=0.01, vmin=vmin, vmax=vmax, **kwargs)
-    elif contour:
-        
-        if isinstance(nlevel, int):
-            levels = np.linspace(np.floor(idat.min()), np.ceil(idat.max()), nlevel)
-        elif isinstance(nlevel, list):
-            levels = nlevel
-        else:
-            raise RuntimeError("Must provide level info for contour! Can be a list of levels of number of levels")
-        # get color value at vertex
-        val = get_vertex_value_from_cell(vertex_xyz, iconn, idat)
+    if mixed_element:
+        gdf = gpd.GeoDataFrame({'value': idat, 'geometry': mesh_polygons})
+        gdf.plot(column='value', ax=ax, cmap=cmap, legend=False)
+        # Create a normalizer and ScalarMappable
+        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+        sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
 
-        tpc = ax.tricontourf(vertex_xyz[:,0], vertex_xyz[:,1], iconn, 
-                       val, levels = levels, extend = 'both', **kwargs)  
-        ax.tricontour(vertex_xyz[:,0], vertex_xyz[:,1], iconn, 
-                       val, colors = 'k', linewidths = 0.5, levels = levels, extend = 'both', **kwargs)  
+    else:
+        if log and not contour: 
+            # use SymLogNorm to normalize in both positive and negative directions.
+            tpc = ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], iconn, 
+                        facecolors= colors, linewidth=0.01,norm=matplotlib.colors.SymLogNorm(linthresh=linthresh, linscale=linscale, vmin=vmin, vmax=vmax), **kwargs)
+        elif not contour: 
+            tpc = ax.tripcolor(vertex_xyz[:,0], vertex_xyz[:,1], iconn, 
+                        facecolors= colors, linewidth=0.01, vmin=vmin, vmax=vmax, **kwargs)
+        elif contour:
+            
+            if isinstance(nlevel, int):
+                levels = np.linspace(np.floor(idat.min()), np.ceil(idat.max()), nlevel)
+            elif isinstance(nlevel, list):
+                levels = nlevel
+            else:
+                raise RuntimeError("Must provide level info for contour! Can be a list of levels of number of levels")
+            # get color value at vertex
+            val = get_vertex_value_from_cell(vertex_xyz, iconn, idat)
+
+            tpc = ax.tricontourf(vertex_xyz[:,0], vertex_xyz[:,1], iconn, 
+                        val, levels = levels, extend = 'both', **kwargs)  
+            ax.tricontour(vertex_xyz[:,0], vertex_xyz[:,1], iconn, 
+                        val, colors = 'k', linewidths = 0.5, levels = levels, extend = 'both', **kwargs)  
    
-    
     if title is False:
         titles = ''
     else:
@@ -612,15 +664,25 @@ def plot_surface_data(vis_data, var_name,
     if colorbar == True:
         if clabel is None and isinstance(var_name, str):
             clabel = var_name + ' '+ unit
-        cb = plt.colorbar(tpc, 
-#                           extend = "both"
-                         )
-        cb.ax.set_ylabel(clabel, labelpad=5)
+
+        if mixed_element:
+            cb = plt.colorbar(sm, ax=ax, label=clabel)
+        else:
+            cb = plt.colorbar(tpc, 
+    #                           extend = "both"
+                            )
+            cb.ax.set_ylabel(clabel, labelpad=5)
     
-    try:
-        return fig, ax, tpc
-    except:
-        return ax, tpc
+    if mixed_element:
+        try:
+            return fig, ax
+        except:
+            return ax
+    else:
+        try:
+            return fig, ax, tpc
+        except:
+            return ax, tpc
     
 # def plot_riverbed(source, vertex_xyz, triangles, rivers=None, dist_to_river = 200, plot = True):
 #     """find riverbed region given river shapefile or index."""
@@ -664,3 +726,4 @@ def plot_surface_data(vis_data, var_name,
 #         return river_idx, shps
 #     except:
 #         return river_idx
+
