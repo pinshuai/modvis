@@ -6,10 +6,10 @@ seaborn
 scikit-learn
 numpy
 dataretrieval
+geopandas
 
 ## optional packages
 # shapely
 # logging
 # fiona
 # rasterio
-# geopandas
