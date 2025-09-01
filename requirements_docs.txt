@@ -11,9 +11,9 @@ tox
 twine
 watchdog
 wheel
-mkdocs
+mkdocs>=1.4
+mkdocs-jupyter>=0.24.1
 mkdocs-git-revision-date-plugin 
-mkdocs-jupyter 
 mkdocs-material 
 mkdocs-pdf-export-plugin
 mkdocstrings
