@@ -388,8 +388,9 @@ def plot_column_data(vis_data, var_name, origin_date='1980-01-01', col_ind = 0, 
         return
 def plot_layer_data(vis_data, var_name, origin_date = '1980-01-01', layer_ind = 0, 
                     time_slice = -1, cmap = "viridis", colorbar = True, clabel = None, 
-                    ax = None, log = False, vmin = None, vmax = None, linthresh = 0.01, 
-                    linscale = 0.01, mixed_element = False, **kwargs):
+                    ax = None, log = False, vmin = None, vmax = None, robust = False, linthresh = 0.01, 
+                    linscale = 0.01, mixed_element = False, data_lim = None,
+                    **kwargs):
     """plot variable in a single layer in the subsurface.
     Parameters:
         vis_data, ats_xdmf.VisFile object
@@ -411,15 +412,24 @@ def plot_layer_data(vis_data, var_name, origin_date = '1980-01-01', layer_ind = 
         ax, axis handel. Default is creating one.
         log, bool
             set plot to log scale if True
+        vmin, float
+            minimum value for color scale
+        vmax, float
+            maximum value for color scale
+        robust, bool
+            whether to use robust scaling (i.e., percentile [2,98] scaling)
         linthresh, float
             keyword for SymLogNorm        
         linscale, float
             see keyword for SymLogNorm
         mixed_element, bool
             whether to plot mixed element meshes
+        data_lim, tuple
+            data limits for plotting
 
     Returns:
-        fig, ax   
+        fig, ax, gdf if mixed_element else fig, ax, tpc
+
     """
     if mixed_element:
         mesh_polygons = vis_data.mesh_polygons
@@ -450,21 +460,33 @@ def plot_layer_data(vis_data, var_name, origin_date = '1980-01-01', layer_ind = 
 
     idat = dat[time_idx, :, ilayer]
 
+    if data_lim is not None:
+        if data_lim[0] is not None:
+            idat[idat < data_lim[0]] = np.nan
+        if data_lim[1] is not None:
+            idat[idat > data_lim[1]] = np.nan
+
     if not mixed_element:
         icells = map[:, ilayer].flatten()
         iconn = conn[icells, -3:]
 
     if vmin is None:
-        vmin = np.nanmin(dat)
-    if vmax is None: 
-        vmax = np.nanmax(dat)
+        vmin = np.nanmin(idat)
+    if vmax is None:
+        vmax = np.nanmax(idat)
+    if robust:
+        vmin, vmax = np.nanpercentile(idat, [2, 98])
+
     if ax == None:
         fig, ax = plt.subplots(1,1, figsize=(8, 4))    
     ax.set_aspect('equal')
 
     if mixed_element:
         gdf = gpd.GeoDataFrame({'value': idat, 'geometry': mesh_polygons})
-        gdf.plot(column='value', ax=ax, cmap=cmap, legend=False)
+        gdf.plot(column='value', ax=ax, cmap=cmap, 
+                vmin=vmin, vmax=vmax,
+                 legend=False)
+
         # Create a normalizer and ScalarMappable
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)        
@@ -495,9 +517,9 @@ def plot_layer_data(vis_data, var_name, origin_date = '1980-01-01', layer_ind = 
     
     if mixed_element:
         try:
-            return fig, ax
+            return fig, ax, gdf
         except:
-            return ax
+            return ax, gdf
     else:
         try:
             return fig, ax, tpc
@@ -549,7 +571,8 @@ def plot_surface_data(vis_data, var_name,
         mixed_element, bool
             whether the mesh is mixed element or not. Default to False
     Returns:
-        fig, ax   
+        fig, ax, gdf if mixed_element else fig, ax, tpc
+
     """
 
     if mixed_element:
@@ -602,10 +625,9 @@ def plot_surface_data(vis_data, var_name,
             idat[idat > data_lim[1]] = np.nan
 
     if vmin is None:
-        vmin = idat.min()
+        vmin = np.nanmin(idat)
     if vmax is None:
-        vmax = idat.max()
-
+        vmax = np.nanmax(idat)
     if robust:
         vmin, vmax = np.nanpercentile(idat, [2, 98])
         
@@ -625,7 +647,9 @@ def plot_surface_data(vis_data, var_name,
     
     if mixed_element:
         gdf = gpd.GeoDataFrame({'value': idat, 'geometry': mesh_polygons})
-        gdf.plot(column='value', ax=ax, cmap=cmap, legend=False)
+        gdf.plot(column='value', ax=ax, cmap=cmap, 
+                 vmin=vmin, vmax=vmax,
+                 legend=False)
         # Create a normalizer and ScalarMappable
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -675,9 +699,9 @@ def plot_surface_data(vis_data, var_name,
     
     if mixed_element:
         try:
-            return fig, ax
+            return fig, ax, gdf
         except:
-            return ax
+            return ax, gdf
     else:
         try:
             return fig, ax, tpc
