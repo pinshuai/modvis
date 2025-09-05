@@ -551,7 +551,7 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
                       'D', UTC_time = None, resample_freq = None, canopy =
                       True, origin_date = "1980-01-01", noleap = True, 
                       restart_dir = None, out_file = None, plot = False,
-                      catchment_area=None, sep = ',',
+                      catchment_area=None, sep = ',', domain_names=None,
                       **kwargs):
     """read ATS output files, new dataframe format
     Parameters:
@@ -581,6 +581,8 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
             If float, use this value as catchment area. Otherwise, calculate from model output (requires "*surface_data.h5" file!).
         sep: str
             delimiter used in the water balance file. Default is ','
+        domain_names: list or None
+            If list, use these names as domain names. Otherwise, use all domains.
     Returns:
         dataframe of model variables and/or a resampled dataframe.
     
@@ -669,10 +671,11 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
                 
     if plot:
         # plot water balance
-        if canopy:
-            domain_names = ['global', 'canopy', 'snow', 'surface', 'subsurface']
-        else:
-            domain_names = ['global', 'snow', 'surface', 'subsurface']
+        if domain_names is None:
+            if canopy:
+                domain_names = ['global', 'canopy', 'snow', 'surface', 'subsurface']
+            else:
+                domain_names = ['global', 'snow', 'surface', 'subsurface']
 
         def cumu_plot(domain, df, ax):
             """Plot cumulative fluxes to check water balance at each domain. 
@@ -767,7 +770,7 @@ def load_waterBalance(model_dir, WB_filename = "water_balance.dat", timestep =
             #     ax.xaxis.set_ticklabels([])
 
 
-        fig, axes = plt.subplots(len(domain_names) + 1, 1, figsize=(8, 3*len(domain_names)), sharex=True, dpi=150)
+        fig, axes = plt.subplots(len(domain_names) + 1, 1, figsize=(8, max(6, 3 * len(domain_names))), sharex=True, dpi=150)
  
         # plot incoming and outgoing fluxes
         ax = axes[0]
