@@ -533,7 +533,13 @@ def get_subbasin_value(vis_data, varname, subbasin_cells, volume, times, weighte
 
 
 def surfaceArea(model_dir):
-    """get surface area of ATS model"""
+    """get surface area [m^2] of ATS model. This assumes that *surface_data.h5 file is in the model directory.
+    Parameters:
+        model_dir: str
+            path to model directory
+    Returns:
+        surface area [m^2]
+    """
     h5_files = glob.glob(os.path.join(model_dir, "*surface_data.h5"))
     if len(h5_files) == 1:
         with h5py.File(h5_files[0]) as f:
