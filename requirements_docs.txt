@@ -6,7 +6,7 @@ ipykernel
 livereload
 nbconvert
 pip
-sphinx
+sphinx>=5.0
 tox
 twine
 watchdog

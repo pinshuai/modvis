@@ -86,6 +86,9 @@ pv.plot_layer_data(subsurface_vis, var_name = "saturation_liquid",
 
 Jupyter notebook examples can be found under [examples/notebooks](./examples/notebooks)
 
+## How to cite?
+
+Pin Shuai, Rathore, S., & Coon, E. (2025). pinshuai/modvis: ModVis v0.0.9 (v0.0.9). Zenodo. https://doi.org/10.5281/zenodo.17073812
 
 ## Credits
 

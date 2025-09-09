@@ -31,7 +31,7 @@ setup(
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: GPL License',
         'Natural Language :: English',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
@@ -41,7 +41,7 @@ setup(
     description="A python package for model visualization.",
     install_requires=install_requires,
     dependency_links=dependency_links,
-    license="MIT license",
+    license="GPL license",
     long_description=readme,
     long_description_content_type='text/markdown',
     include_package_data=True,

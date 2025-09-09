@@ -2,6 +2,31 @@
 
 Below is a list of functions available in `modvis`.
 
+## Mixed-element mesh visualization
+
+- import visdump file
+
+```python  
+surface_vis = xdmf.VisFile(model_dir='.', domain='surface', mixed_element=True)
+subsurface_vis = xdmf.VisFile(model_dir='.', domain=None, mixed_element=True)
+```
+
+- plot surface ponded depth
+
+```python
+pv.plot_surface_data(surface_vis, var_name="surface-ponded_depth", 
+                              time_slice="2019-05-01", mixed_element=True)
+```
+
+- plot subsurface saturation. Note layer index is ordered from top to bottom (0--top).
+
+```python
+pv.plot_layer_data(subsurface_vis, var_name = "saturation_liquid", 
+                             layer_ind = 0, time_slice= 0, mixed_element=True)
+```
+
+## Trianglular mesh visualization (default)
+
 - To load visdump file:
 
 !!! note
