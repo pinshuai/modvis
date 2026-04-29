@@ -43,7 +43,6 @@ def insertNA(df, dt_col, freq=None):
     end_time = df[dt_col].iloc[-1]
     # ic(start_time)
     # ic(end_time)
-    
     # find frequency
     if freq is None:
         ## get the highest frequency in sec
@@ -422,7 +421,8 @@ def get_metrics(obs_t, obs, simu_t, simu, metrics = 'all', start_date = None,
         df = df[df.datetime < end_date].copy()
         df = df[df.datetime > start_date]
         
-    assert(df.shape[0] > 2)
+    assert(df.shape[0] > 2), (f"Not enough overlapping data points (need > 2, got {df.shape[0]}). "
+                          f"Check that obs and simu date ranges overlap.")
 
     df['obs'] = pd.to_numeric(df['obs'])
     df['simu'] = pd.to_numeric(df['simu'])
